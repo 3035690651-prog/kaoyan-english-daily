@@ -1,149 +1,178 @@
-name: 每日新闻自动更新（DeepSeek + 考研高频词）
+name: 每日新闻自动更新（DeepSeek V4 Flash + 考研高频词）
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * *'  # 每天UTC 0点 = 北京时间早8点
   workflow_dispatch:
 
 jobs:
   update-news:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout
+      - name: 检出仓库
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 0
-          # 不要设置 persist-credentials: false，否则无法推送
 
-      - name: Setup Python
+      - name: 设置Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install feedparser openai
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests feedparser openai
 
-      - name: Generate & run update script
+      - name: 生成Python脚本
+        run: |
+          cat > update_news.py << 'EOF'
+          import requests
+          import feedparser
+          import json
+          from datetime import datetime
+          import os
+          import random
+          import time
+          from openai import OpenAI
+
+          # 稳定英文新闻源
+          NEWS_SOURCES = {
+              "technology": "https://www.sciencedaily.com/rss/top/technology.xml",
+              "environment": "https://www.sciencedaily.com/rss/top/environment.xml",
+              "health": "https://www.sciencedaily.com/rss/top/health.xml",
+              "science": "https://www.sciencedaily.com/rss/top/science.xml",
+              "education": "https://feeds.bbci.co.uk/news/education/rss.xml",
+              "business": "https://feeds.bbci.co.uk/news/business/rss.xml"
+          }
+
+          # 考研高频词
+          KAOYAN_HIGH_FREQ_VOCAB = {
+              "substantial": {"phonetic": "/səbˈstænʃl/", "meaning": "adj. 大量的；实质的"},
+              "phenomenon": {"phonetic": "/fəˈnɒmɪnən/", "meaning": "n. 现象；奇迹"},
+              "consequence": {"phonetic": "/ˈkɒnsɪkwəns/", "meaning": "n. 结果；重要性"},
+              "fundamental": {"phonetic": "/ˌfʌndəˈmentl/", "meaning": "adj. 基本的，根本的"},
+              "significant": {"phonetic": "/sɪɡˈnɪfɪkənt/", "meaning": "adj. 重大的；有效的"},
+              "demonstrate": {"phonetic": "/ˈdemənstreɪt/", "meaning": "vt. 证明；展示"},
+              "perspective": {"phonetic": "/pəˈspektɪv/", "meaning": "n. 观点；远景"},
+              "inevitable": {"phonetic": "/ɪnˈevɪtəbl/", "meaning": "adj. 必然的，不可避免的"},
+              "comprehensive": {"phonetic": "/ˌkɒmprɪˈhensɪv/", "meaning": "adj. 综合的；广泛的"},
+              "nevertheless": {"phonetic": "/ˌnevəðəˈles/", "meaning": "adv. 然而，不过"}
+          }
+
+          def fetch_news_from_rss(category, rss_url):
+              try:
+                  headers = {"User-Agent": "Mozilla/5.0"}
+                  time.sleep(random.uniform(0.5, 1.5))
+                  feed = feedparser.parse(rss_url, request_headers=headers)
+                  
+                  if feed.bozo != 0:
+                      print(f"解析 {category} 失败")
+                      return []
+                  
+                  articles = []
+                  for entry in feed.entries[:1]:
+                      articles.append({
+                          "title": entry.title,
+                          "link": entry.link,
+                          "summary": entry.summary,
+                          "category": category
+                      })
+                  return articles
+                  
+              except Exception as e:
+                  print(f"获取 {category} 出错: {e}")
+                  return []
+
+          def process_with_deepseek(article):
+              client = OpenAI(
+                  api_key=os.getenv("DEEPSEEK_API_KEY"),
+                  base_url="https://api.deepseek.com"
+              )
+              
+              prompt = f"""
+              处理这篇考研英语新闻，严格返回JSON，不要任何多余文字：
+              标题：{article['title']}
+              摘要：{article['summary']}
+              
+              要求：
+              1. 提取300词以内英文核心内容
+              2. 精准中文翻译
+              3. 挑出5个考研核心词
+              4. 分析1个长难句
+              5. 难度：英语一/英语二
+              
+              格式：
+              {{
+                "content": "英文",
+                "contentCn": "中文",
+                "vocabWords": ["word1","word2"],
+                "sentences": [{{"original":"","translation":"","structure":[],"points":[]}}],
+                "difficulty": "英语一"
+              }}
+              """
+              
+              try:
+                  response = client.chat.completions.create(
+                      model="deepseek-chat",
+                      messages=[{"role": "user", "content": prompt}],
+                      temperature=0.1,
+                      timeout=40
+                  )
+                  res = response.choices[0].message.content.strip()
+                  return json.loads(res)
+              except Exception as e:
+                  print(f"AI处理失败: {e}")
+                  return None
+
+          def update_html_file(new_articles):
+              with open("index.html", "r", encoding="utf-8") as f:
+                  html = f.read()
+              
+              import re
+              news_str = json.dumps(new_articles, ensure_ascii=False, indent=2)
+              html = re.sub(r'const newsData = \[.*?\];', 
+                          f'const newsData = {news_str};', 
+                          html, flags=re.DOTALL)
+              
+              with open("index.html", "w", encoding="utf-8") as f:
+                  f.write(html)
+
+          if __name__ == "__main__":
+              all_articles = []
+              today = datetime.now().strftime("%Y-%m-%d")
+              
+              print("开始抓取新闻...")
+              for category, url in NEWS_SOURCES.items():
+                  articles = fetch_news_from_rss(category, url)
+                  for art in articles:
+                      processed = process_with_deepseek(art)
+                      if processed:
+                          processed.update({
+                              "id": len(all_articles)+1,
+                              "date": today,
+                              "title": art["title"],
+                              "source": art["link"].split('/')[2]
+                          })
+                          all_articles.append(processed)
+                          print(f"成功处理：{art['title'][:40]}")
+              
+              if all_articles:
+                  update_html_file(all_articles)
+                  print(f"✅ 更新完成，共 {len(all_articles)} 篇")
+              else:
+                  print("❌ 无有效新闻")
+          EOF
+
+      - name: 运行脚本
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          python -c "
-import feedparser, json, os, random, re, time
-from datetime import datetime
-from openai import OpenAI
+        run: python update_news.py
 
-NEWS_SOURCES = {
-    'technology': 'https://www.sciencedaily.com/rss/top/technology.xml',
-    'environment': 'https://www.sciencedaily.com/rss/top/environment.xml',
-    'health': 'https://www.sciencedaily.com/rss/top/health.xml',
-    'science': 'https://www.sciencedaily.com/rss/top/science.xml',
-    'education': 'https://feeds.bbci.co.uk/news/education/rss.xml',
-    'business': 'https://feeds.bbci.co.uk/news/business/rss.xml',
-}
-
-def fetch_news(category, rss_url):
-    try:
-        time.sleep(random.uniform(0.5, 2.0))
-        feed = feedparser.parse(rss_url, request_headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
-        if feed.bozo != 0:
-            print(f'RSS parse warning ({category}): {feed.bozo_exception}')
-        articles = []
-        for entry in feed.entries[:1]:
-            articles.append({'title': entry.title, 'link': entry.link, 'summary': getattr(entry, 'summary', ''), 'category': category})
-        print(f'OK {category}: {len(articles)} articles')
-        return articles
-    except Exception as e:
-        print(f'FAIL {category}: {e}')
-        return []
-
-def process_article(article):
-    client = OpenAI(api_key=os.getenv('DEEPSEEK_API_KEY'), base_url='https://api.deepseek.com')
-    prompt = f'''Process this English news for Chinese graduate exam (kaoyan) English learners:
-Title: {article['title']}
-Summary: {article['summary']}
-Link: {article['link']}
-
-Requirements:
-1. Extract 300-400 words of core content (preserve original style)
-2. Provide accurate Chinese translation
-3. Mark kaoyan-level vocabulary with <span class=\"vocab-highlight\" data-word=\"WORD\">WORD</span>
-4. Identify 2-3 long/difficult sentences with structure analysis and exam tips
-5. Classify difficulty: 英语一 or 英语二
-
-Return ONLY valid JSON, no extra text:
-{{
-    \"content\": [{{\"en\": \"...english paragraph with vocab spans...\", \"cn\": \"...chinese translation...\"}}],
-    \"vocabWords\": [\"word1\", \"word2\"],
-    \"sentences\": [{{\"original\": \"...\", \"translation\": \"...\", \"structure\": [\"...\"], \"points\": [\"...\"]}}],
-    \"difficulty\": \"英语一\"
-}}'''
-    try:
-        resp = client.chat.completions.create(model='deepseek-chat', messages=[{'role': 'user', 'content': prompt}], temperature=0.2, timeout=60)
-        text = resp.choices[0].message.content.strip()
-        # Remove markdown code fences if present
-        text = re.sub(r'^```(?:json)?\s*\n?', '', text)
-        text = re.sub(r'\n?```\s*$', '', text)
-        return json.loads(text)
-    except Exception as e:
-        print(f'AI processing failed: {e}')
-        return None
-
-today = datetime.now().strftime('%Y-%m-%d')
-all_articles = []
-
-for cat, url in NEWS_SOURCES.items():
-    articles = fetch_news(cat, url)
-    for a in articles:
-        print(f'Processing: {a[\"title\"][:60]}...')
-        result = process_article(a)
-        if result:
-            content_plain = ' '.join(p['en'] for p in result.get('content', []))
-            content_cn_plain = ' '.join(p['cn'] for p in result.get('content', []))
-            # Strip HTML tags for summary
-            summary_en = re.sub(r'<[^>]+>', '', content_plain)[:150]
-            summary_cn = content_cn_plain[:150]
-            all_articles.append({
-                'id': len(all_articles) + 1,
-                'date': today,
-                'category': cat.capitalize(),
-                'difficulty': result.get('difficulty', '英语二'),
-                'title': a['title'],
-                'titleCn': '',
-                'source': a['link'].split('/')[2] if '//' in a['link'] else 'Unknown',
-                'summary': summary_en + '...',
-                'summaryCn': summary_cn + '...',
-                'content': result.get('content', []),
-                'vocabWords': result.get('vocabWords', []),
-                'sentences': result.get('sentences', []),
-                'isFavorited': False,
-            })
-
-if all_articles:
-    with open('index.html', 'r', encoding='utf-8') as f:
-        html = f.read()
-    news_json = json.dumps(all_articles, ensure_ascii=False, indent=6)
-    # Match const NEWS_DATA = [...];
-    new_html = re.sub(r'const NEWS_DATA\s*=\s*\[.*?\];', f'const NEWS_DATA = {news_json};', html, flags=re.DOTALL)
-    if new_html == html:
-        print('ERROR: NEWS_DATA replacement failed - pattern not matched!')
-    else:
-        with open('index.html', 'w', encoding='utf-8') as f:
-            f.write(new_html)
-        print(f'SUCCESS: Updated with {len(all_articles)} articles')
-else:
-    print('WARNING: No articles processed, skipping update')
-"
-
-      - name: Commit & push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          if git diff --staged --quiet; then
-            echo "No changes, skipping commit"
-          else
-            git commit -m "Daily update: $(date +'%Y-%m-%d')"
-            git push
-          fi
+      - name: 提交更新
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
+          message: "每日新闻自动更新"
