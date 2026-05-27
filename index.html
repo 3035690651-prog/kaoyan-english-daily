@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily English — 考研英语每日热点</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: { serif: ['Georgia', 'Noto Serif SC', 'serif'], sans: ['Inter', 'system-ui', 'sans-serif'] }
+    }
+  }
+}
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --vocab-green: #10b981;
+  --vocab-green-bg: #d1fae5;
+  --vocab-green-bg-dark: #064e3b;
+  --sentence-purple: #8b5cf6;
+  --sentence-purple-bg: #ede9fe;
+  --sentence-purple-bg-dark: #2e1065;
+}
+.vocab-highlight {
+  color: var(--vocab-green);
+  border-bottom: 2px dashed var(--vocab-green);
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 2px;
+  transition: all .2s;
+  position: relative;
+}
+.vocab-highlight:hover { background: var(--vocab-green-bg); }
+.dark .vocab-highlight:hover { background: var(--vocab-green-bg-dark); }
+.vocab-highlight.in-vocab-book { background: var(--vocab-green-bg); font-weight: 600; }
+.dark .vocab-highlight.in-vocab-book { background: var(--vocab-green-bg-dark); }
+
+.sentence-mark {
+  border-left: 3px solid var(--sentence-purple);
+  padding: 6px 10px;
+  margin: 4px 0;
+  display: block;
+  cursor: pointer;
+  border-radius: 0 6px 6px 0;
+  transition: all .25s;
+  background: var(--sentence-purple-bg);
+}
+.dark .sentence-mark { background: var(--sentence-purple-bg-dark); }
+.sentence-mark:hover { box-shadow: 0 2px 8px rgba(139,92,246,.25); transform: translateX(2px); }
+.sentence-mark.active { box-shadow: 0 0 0 3px rgba(139,92,246,.35); }
+
+/* Article content typography */
+.article-content p { margin-bottom: 1.25em; line-height: 1.9; }
+.article-content .cn-trans { color: #6b7280; font-size: .92em; border-left: 2px solid #d1d5db; padding-left: 12px; margin-top: 6px; margin-bottom: 1.25em; }
+.dark .article-content .cn-trans { color: #9ca3af; border-left-color: #4b5563; }
+
+/* Tooltip */
+.vocab-tooltip {
+  position: fixed; z-index: 9999;
+  background: #1f2937; color: #f9fafb;
+  padding: 10px 14px; border-radius: 8px;
+  font-size: 14px; max-width: 260px;
+  pointer-events: none; opacity: 0; transform: translateY(4px);
+  transition: opacity .18s, transform .18s;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.vocab-tooltip.show { opacity: 1; transform: translateY(0); }
+.vocab-tooltip .tt-word { font-weight: 700; font-size: 16px; color: #10b981; }
+.vocab-tooltip .tt-phonetic { font-size: 12px; color: #9ca3af; margin-left: 6px; }
+.vocab-tooltip .tt-meaning { display: block; margin-top: 4px; color: #e5e7eb; }
+.vocab-tooltip .tt-hint { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+/* Sentence analysis panel */
+.sentence-panel {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  padding: 18px; margin: 14px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+.dark .sentence-panel { background: #1f2937; border-color: #374151; }
+.sentence-panel .sp-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; margin-bottom: 6px;
+}
+.sentence-panel .sp-original { font-style: italic; color: #374151; margin-bottom: 8px; }
+.dark .sentence-panel .sp-original { color: #d1d5db; }
+
+/* Heart animation */
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.heart-beat { animation: heartBeat .4s ease; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+
+/* Transitions */
+.view-enter { animation: fadeSlideIn .3s ease; }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media print {
+  nav, .no-print, .vocab-tooltip { display: none !important; }
+  body { font-size: 12pt; }
+}
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen transition-colors">
+
+<!-- ==================== NAVBAR ==================== -->
+<nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm">
+  <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('home')">
+      <span class="text-2xl">&#128218;</span>
+      <div>
+        <h1 class="text-lg font-bold leading-tight">Daily English</h1>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">考研英语 · 每日热点</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-1 sm:gap-3">
+      <button onclick="navigateTo('home')" id="navHome" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 transition-colors">首页</button>
+      <button onclick="navigateTo('vocab')" id="navVocab" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
+        词汇本 <span id="vocabBadge" class="ml-1 text-xs bg-emerald-500 text-white rounded-full px-1.5 py-0.5 hidden">0</span>
+      </button>
+      <button onclick="navigateTo('favorites')" id="navFav" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
+        收藏 <span id="favBadge" class="ml-1 text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 hidden">0</span>
+      </button>
+      <button onclick="toggleDark()" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="切换暗色模式">
+        <i class="fas fa-moon dark:hidden"></i>
+        <i class="fas fa-sun hidden dark:inline"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== MAIN CONTAINER ==================== -->
+<main id="app" class="max-w-6xl mx-auto px-4 py-6"></main>
+
+<!-- ==================== WORD TOOLTIP ==================== -->
+<div id="wordTooltip" class="vocab-tooltip">
+  <span class="tt-word"></span><span class="tt-phonetic"></span>
+  <span class="tt-meaning"></span>
+  <span class="tt-hint">点击加入词汇本</span>
+</div>
+
+<!-- ==================== SENTENCE PANEL OVERLAY ==================== -->
+<div id="sentenceOverlay" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4" onclick="closeSentencePanel()">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold flex items-center gap-2"><span class="text-purple-600">&#9670;</span> 长难句解析</h3>
+      <button onclick="closeSentencePanel()" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="sentencePanelContent"></div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  DATA LAYER
+// ================================================================
+
+/** 考研核心词汇库 (200+ words with phonetics & Chinese meanings) */
+const VOCAB_DB = {
+  "abandon":{p:"/əˈbændən/",m:"v. 放弃；抛弃",l:"高频"},
+  "abstract":{p:"/ˈæbstrækt/",m:"adj. 抽象的 n. 摘要",l:"高频"},
+  "abuse":{p:"/əˈbjuːz/",m:"v./n. 滥用；虐待",l:"中频"},
+  "academic":{p:"/ˌækəˈdemɪk/",m:"adj. 学术的",l:"高频"},
+  "accelerate":{p:"/əkˈseləreɪt/",m:"v. 加速；促进",l:"中频"},
+  "access":{p:"/ˈækses/",m:"n. 进入；通道 v. 访问",l:"高频"},
+  "accommodate":{p:"/əˈkɒmədeɪt/",m:"v. 容纳；适应",l:"中频"},
+  "accompany":{p:"/əˈkʌmpəni/",m:"v. 陪伴；伴随",l:"高频"},
+  "accomplish":{p:"/əˈkʌmplɪʃ/",m:"v. 完成；实现",l:"中频"},
+  "accumulate":{p:"/əˈkjuːmjəleɪt/",m:"v. 积累；积聚",l:"中频"},
+  "acknowledge":{p:"/əkˈnɒlɪdʒ/",m:"v. 承认；感谢",l:"中频"},
+  "acquire":{p:"/əˈkwaɪər/",m:"v. 获得；习得",l:"高频"},
+  "adapt":{p:"/əˈdæpt/",m:"v. 适应；改编",l:"高频"},
+  "adequate":{p:"/ˈædɪkwət/",m:"adj. 足够的；适当的",l:"中频"},
+  "advocate":{p:"/ˈædvəkeɪt/",m:"v. 提倡 n. 倡导者",l:"高频"},
+  "affluent":{p:"/ˈæfluənt/",m:"adj. 富裕的；丰富的",l:"中频"},
+  "aggressive":{p:"/əˈɡresɪv/",m:"adj. 侵略的；积极的",l:"高频"},
+  "alleviate":{p:"/əˈliːvieɪt/",m:"v. 减轻；缓解",l:"高频"},
+  "allocate":{p:"/ˈæləkeɪt/",m:"v. 分配；拨出",l:"中频"},
+  "ambiguous":{p:"/æmˈbɪɡjuəs/",m:"adj. 模棱两可的",l:"高频"},
+  "ambitious":{p:"/æmˈbɪʃəs/",m:"adj. 有雄心的",l:"高频"},
+  "anticipate":{p:"/ænˈtɪsɪpeɪt/",m:"v. 预期；期望",l:"中频"},
+  "apparent":{p:"/əˈpærənt/",m:"adj. 明显的；表面上的",l:"中频"},
+  "arbitrary":{p:"/ˈɑːrbɪtreri/",m:"adj. 任意的；专断的",l:"高频"},
+  "artificial":{p:"/ˌɑːrtɪˈfɪʃl/",m:"adj. 人工的；虚假的",l:"高频"},
+  "assess":{p:"/əˈses/",m:"v. 评估；评定",l:"中频"},
+  "attribute":{p:"/əˈtrɪbjuːt/",m:"v. 归因于 n. 属性",l:"高频"},
+  "authentic":{p:"/ɔːˈθentɪk/",m:"adj. 真正的；真实的",l:"中频"},
+  "autonomous":{p:"/ɔːˈtɒnəməs/",m:"adj. 自治的；自主的",l:"高频"},
+  "barrier":{p:"/ˈbæriər/",m:"n. 障碍；屏障",l:"高频"},
+  "bias":{p:"/ˈbaɪəs/",m:"n. 偏见；偏向",l:"高频"},
+  "capability":{p:"/ˌkeɪpəˈbɪləti/",m:"n. 能力；才能",l:"中频"},
+  "capture":{p:"/ˈkæptʃər/",m:"v. 捕获；吸引",l:"高频"},
+  "chronic":{p:"/ˈkrɒnɪk/",m:"adj. 慢性的；长期的",l:"高频"},
+  "cognitive":{p:"/ˈkɒɡnətɪv/",m:"adj. 认知的",l:"高频"},
+  "collapse":{p:"/kəˈlæps/",m:"v./n. 倒塌；崩溃",l:"中频"},
+  "commission":{p:"/kəˈmɪʃn/",m:"n. 委员会；佣金",l:"中频"},
+  "commodity":{p:"/kəˈmɒdəti/",m:"n. 商品；货物",l:"高频"},
+  "compensate":{p:"/ˈkɒmpenseɪt/",m:"v. 补偿；赔偿",l:"中频"},
+  "competent":{p:"/ˈkɒmpɪtənt/",m:"adj. 有能力的",l:"中频"},
+  "compliance":{p:"/kəmˈplaɪəns/",m:"n. 遵守；服从",l:"高频"},
+  "component":{p:"/kəmˈpəʊnənt/",m:"n. 组成部分",l:"高频"},
+  "comprehensive":{p:"/ˌkɒmprɪˈhensɪv/",m:"adj. 全面的；综合的",l:"高频"},
+  "conceive":{p:"/kənˈsiːv/",m:"v. 构思；想象",l:"高频"},
+  "concept":{p:"/ˈkɒnsept/",m:"n. 概念；观念",l:"高频"},
+  "concrete":{p:"/ˈkɒŋkriːt/",m:"adj. 具体的",l:"中频"},
+  "confer":{p:"/kənˈfɜːr/",m:"v. 授予；商讨",l:"高频"},
+  "confine":{p:"/kənˈfaɪn/",m:"v. 限制；局限于",l:"高频"},
+  "conscious":{p:"/ˈkɒnʃəs/",m:"adj. 有意识的",l:"高频"},
+  "consensus":{p:"/kənˈsensəs/",m:"n. 共识；一致意见",l:"高频"},
+  "consequence":{p:"/ˈkɒnsɪkwəns/",m:"n. 结果；后果",l:"高频"},
+  "conserve":{p:"/kənˈsɜːrv/",m:"v. 保存；保护",l:"中频"},
+  "consistent":{p:"/kənˈsɪstənt/",m:"adj. 一致的",l:"高频"},
+  "consolidate":{p:"/kənˈsɒlɪdeɪt/",m:"v. 巩固；合并",l:"高频"},
+  "constitute":{p:"/ˈkɒnstɪtjuːt/",m:"v. 构成；组成",l:"高频"},
+  "constrain":{p:"/kənˈstreɪn/",m:"v. 限制；约束",l:"高频"},
+  "contemporary":{p:"/kənˈtemprəri/",m:"adj. 当代的",l:"高频"},
+  "contradict":{p:"/ˌkɒntrəˈdɪkt/",m:"v. 反驳；与…矛盾",l:"中频"},
+  "contribute":{p:"/kənˈtrɪbjuːt/",m:"v. 贡献；促成",l:"高频"},
+  "controversial":{p:"/ˌkɒntrəˈvɜːrʃl/",m:"adj. 有争议的",l:"高频"},
+  "convention":{p:"/kənˈvenʃn/",m:"n. 大会；惯例；公约",l:"中频"},
+  "conviction":{p:"/kənˈvɪkʃn/",m:"n. 定罪；深信",l:"高频"},
+  "coordinate":{p:"/kəʊˈɔːrdɪneɪt/",m:"v. 协调；配合",l:"中频"},
+  "correlate":{p:"/ˈkɒrəleɪt/",m:"v. 相互关联",l:"高频"},
+  "crucial":{p:"/ˈkruːʃl/",m:"adj. 关键的",l:"高频"},
+  "cultivate":{p:"/ˈkʌltɪveɪt/",m:"v. 培养；耕种",l:"中频"},
+  "decline":{p:"/dɪˈklaɪn/",m:"v./n. 下降；衰退",l:"高频"},
+  "deficit":{p:"/ˈdefɪsɪt/",m:"n. 赤字；不足",l:"中频"},
+  "demonstrate":{p:"/ˈdemənstreɪt/",m:"v. 证明；演示",l:"高频"},
+  "deprive":{p:"/dɪˈpraɪv/",m:"v. 剥夺；使丧失",l:"高频"},
+  "derive":{p:"/dɪˈraɪv/",m:"v. 获得；源自",l:"高频"},
+  "deteriorate":{p:"/dɪˈtɪəriəreɪt/",m:"v. 恶化；退化",l:"高频"},
+  "detrimental":{p:"/ˌdetrɪˈmentl/",m:"adj. 有害的",l:"中频"},
+  "devastating":{p:"/ˈdevəsteɪtɪŋ/",m:"adj. 毁灭性的",l:"中频"},
+  "differentiate":{p:"/ˌdɪfəˈrenʃieɪt/",m:"v. 区分；区别",l:"高频"},
+  "dilemma":{p:"/dɪˈlemə/",m:"n. 困境；两难境地",l:"高频"},
+  "diminish":{p:"/dɪˈmɪnɪʃ/",m:"v. 减少；削弱",l:"高频"},
+  "discipline":{p:"/ˈdɪsəplɪn/",m:"n. 纪律；学科",l:"高频"},
+  "discourse":{p:"/ˈdɪskɔːrs/",m:"n. 话语；论述",l:"高频"},
+  "discriminate":{p:"/dɪˈskrɪmɪneɪt/",m:"v. 歧视；区分",l:"高频"},
+  "displace":{p:"/dɪsˈpleɪs/",m:"v. 取代；使流离失所",l:"中频"},
+  "dispose":{p:"/dɪˈspəʊz/",m:"v. 处理；处置",l:"中频"},
+  "distort":{p:"/dɪˈstɔːrt/",m:"v. 扭曲；歪曲",l:"高频"},
+  "diverse":{p:"/daɪˈvɜːrs/",m:"adj. 多样的",l:"高频"},
+  "doctrine":{p:"/ˈdɒktrɪn/",m:"n. 教义；学说",l:"高频"},
+  "domestic":{p:"/dəˈmestɪk/",m:"adj. 国内的；家庭的",l:"高频"},
+  "dominant":{p:"/ˈdɒmɪnənt/",m:"adj. 主导的",l:"高频"},
+  "drastic":{p:"/ˈdræstɪk/",m:"adj. 剧烈的；极端的",l:"中频"},
+  "elaborate":{p:"/ɪˈlæbərət/",m:"adj. 复杂的 v. 详细说明",l:"高频"},
+  "eliminate":{p:"/ɪˈlɪmɪneɪt/",m:"v. 消除；淘汰",l:"高频"},
+  "embrace":{p:"/ɪmˈbreɪs/",m:"v. 拥抱；接受",l:"中频"},
+  "emerge":{p:"/ɪˈmɜːrdʒ/",m:"v. 出现；浮现",l:"高频"},
+  "empirical":{p:"/ɪmˈpɪrɪkl/",m:"adj. 经验主义的",l:"高频"},
+  "endeavor":{p:"/ɪnˈdevər/",m:"v./n. 努力；尽力",l:"高频"},
+  "enhance":{p:"/ɪnˈhɑːns/",m:"v. 增强；提高",l:"高频"},
+  "enormous":{p:"/ɪˈnɔːrməs/",m:"adj. 巨大的",l:"高频"},
+  "entrepreneur":{p:"/ˌɒntrəprəˈnɜːr/",m:"n. 企业家",l:"中频"},
+  "epidemic":{p:"/ˌepɪˈdemɪk/",m:"n. 流行病",l:"中频"},
+  "equivalent":{p:"/ɪˈkwɪvələnt/",m:"adj. 等价的",l:"中频"},
+  "erode":{p:"/ɪˈrəʊd/",m:"v. 侵蚀；腐蚀",l:"高频"},
+  "essential":{p:"/ɪˈsenʃl/",m:"adj. 本质的；必不可少的",l:"高频"},
+  "evolve":{p:"/ɪˈvɒlv/",m:"v. 进化；演变",l:"高频"},
+  "exaggerate":{p:"/ɪɡˈzædʒəreɪt/",m:"v. 夸张；夸大",l:"中频"},
+  "exceed":{p:"/ɪkˈsiːd/",m:"v. 超过；超越",l:"中频"},
+  "explicit":{p:"/ɪkˈsplɪsɪt/",m:"adj. 明确的；直率的",l:"高频"},
+  "exploit":{p:"/ɪkˈsplɔɪt/",m:"v. 开发；剥削",l:"高频"},
+  "facilitate":{p:"/fəˈsɪlɪteɪt/",m:"v. 促进；使便利",l:"高频"},
+  "fluctuate":{p:"/ˈflʌktʃueɪt/",m:"v. 波动；起伏",l:"高频"},
+  "formidable":{p:"/ˈfɔːrmɪdəbl/",m:"adj. 可怕的；艰难的",l:"高频"},
+  "fundamental":{p:"/ˌfʌndəˈmentl/",m:"adj. 基本的；根本的",l:"高频"},
+  "genuine":{p:"/ˈdʒenjuɪn/",m:"adj. 真正的；真诚的",l:"中频"},
+  "hierarchy":{p:"/ˈhaɪərɑːrki/",m:"n. 等级制度",l:"高频"},
+  "hypothesis":{p:"/haɪˈpɒθəsɪs/",m:"n. 假说；假设",l:"高频"},
+  "ideology":{p:"/ˌaɪdiˈɒlədʒi/",m:"n. 意识形态",l:"高频"},
+  "ignorance":{p:"/ˈɪɡnərəns/",m:"n. 无知；愚昧",l:"中频"},
+  "illuminate":{p:"/ɪˈluːmɪneɪt/",m:"v. 照亮；阐明",l:"高频"},
+  "immense":{p:"/ɪˈmens/",m:"adj. 巨大的",l:"高频"},
+  "implement":{p:"/ˈɪmplɪment/",m:"v. 实施；执行",l:"高频"},
+  "implicit":{p:"/ɪmˈplɪsɪt/",m:"adj. 含蓄的；隐含的",l:"高频"},
+  "impose":{p:"/ɪmˈpəʊz/",m:"v. 强加；征收",l:"高频"},
+  "incentive":{p:"/ɪnˈsentɪv/",m:"n. 激励；刺激",l:"高频"},
+  "incorporate":{p:"/ɪnˈkɔːrpəreɪt/",m:"v. 包含；合并",l:"高频"},
+  "inevitable":{p:"/ɪnˈevɪtəbl/",m:"adj. 不可避免的",l:"高频"},
+  "infrastructure":{p:"/ˈɪnfrəstrʌktʃər/",m:"n. 基础设施",l:"高频"},
+  "inherent":{p:"/ɪnˈhɪərənt/",m:"adj. 固有的；内在的",l:"高频"},
+  "innovation":{p:"/ˌɪnəˈveɪʃn/",m:"n. 创新；革新",l:"高频"},
+  "insight":{p:"/ˈɪnsaɪt/",m:"n. 洞察力；深刻见解",l:"中频"},
+  "integrate":{p:"/ˈɪntɪɡreɪt/",m:"v. 整合；融合",l:"高频"},
+  "integrity":{p:"/ɪnˈteɡrəti/",m:"n. 正直；完整",l:"高频"},
+  "intellectual":{p:"/ˌɪntəˈlektʃuəl/",m:"adj. 智力的 n. 知识分子",l:"高频"},
+  "intervene":{p:"/ˌɪntərˈviːn/",m:"v. 干预；介入",l:"高频"},
+  "intrinsic":{p:"/ɪnˈtrɪnsɪk/",m:"adj. 内在的；本质的",l:"高频"},
+  "justify":{p:"/ˈdʒʌstɪfaɪ/",m:"v. 证明…正当",l:"高频"},
+  "legislation":{p:"/ˌledʒɪsˈleɪʃn/",m:"n. 立法；法规",l:"高频"},
+  "legitimate":{p:"/lɪˈdʒɪtɪmət/",m:"adj. 合法的；正当的",l:"高频"},
+  "liberal":{p:"/ˈlɪbərəl/",m:"adj. 自由的；开明的",l:"中频"},
+  "manifest":{p:"/ˈmænɪfest/",m:"v. 表明 adj. 明显的",l:"高频"},
+  "manipulate":{p:"/məˈnɪpjuleɪt/",m:"v. 操纵；操控",l:"高频"},
+  "mechanism":{p:"/ˈmekənɪzəm/",m:"n. 机制；原理",l:"高频"},
+  "migrate":{p:"/maɪˈɡreɪt/",m:"v. 迁移；迁徙",l:"中频"},
+  "minimize":{p:"/ˈmɪnɪmaɪz/",m:"v. 最小化",l:"中频"},
+  "monopoly":{p:"/məˈnɒpəli/",m:"n. 垄断；独占",l:"高频"},
+  "morality":{p:"/məˈræləti/",m:"n. 道德；品行",l:"高频"},
+  "narrative":{p:"/ˈnærətɪv/",m:"n. 叙事；故事",l:"高频"},
+  "negligible":{p:"/ˈneɡlɪdʒəbl/",m:"adj. 可忽略不计的",l:"高频"},
+  "notion":{p:"/ˈnəʊʃn/",m:"n. 概念；观念",l:"中频"},
+  "obscure":{p:"/əbˈskjʊər/",m:"adj. 模糊的；晦涩的",l:"高频"},
+  "obstacle":{p:"/ˈɒbstəkl/",m:"n. 障碍；妨碍",l:"中频"},
+  "paradigm":{p:"/ˈpærədaɪm/",m:"n. 范式；典范",l:"高频"},
+  "paradox":{p:"/ˈpærədɒks/",m:"n. 悖论；矛盾",l:"高频"},
+  "perceive":{p:"/pərˈsiːv/",m:"v. 察觉；感知",l:"高频"},
+  "persistent":{p:"/pərˈsɪstənt/",m:"adj. 坚持的；持续的",l:"高频"},
+  "perspective":{p:"/pərˈspektɪv/",m:"n. 视角；观点",l:"高频"},
+  "plausible":{p:"/ˈplɔːzəbl/",m:"adj. 似乎合理的",l:"高频"},
+  "precede":{p:"/prɪˈsiːd/",m:"v. 先于；在…之前",l:"高频"},
+  "predominant":{p:"/prɪˈdɒmɪnənt/",m:"adj. 主要的",l:"高频"},
+  "prejudice":{p:"/ˈpredʒudɪs/",m:"n. 偏见；歧视",l:"高频"},
+  "preliminary":{p:"/prɪˈlɪmɪnəri/",m:"adj. 初步的",l:"高频"},
+  "prescribe":{p:"/prɪˈskraɪb/",m:"v. 规定；开处方",l:"高频"},
+  "prevail":{p:"/prɪˈveɪl/",m:"v. 盛行；占优势",l:"高频"},
+  "profound":{p:"/prəˈfaʊnd/",m:"adj. 深刻的；深远的",l:"高频"},
+  "prominent":{p:"/ˈprɒmɪnənt/",m:"adj. 突出的；著名的",l:"高频"},
+  "proposition":{p:"/ˌprɒpəˈzɪʃn/",m:"n. 提议；命题",l:"高频"},
+  "prosperity":{p:"/prɒˈsperəti/",m:"n. 繁荣；兴旺",l:"中频"},
+  "provoke":{p:"/prəˈvəʊk/",m:"v. 激怒；引发",l:"高频"},
+  "pursue":{p:"/pərˈsjuː/",m:"v. 追求；从事",l:"高频"},
+  "radical":{p:"/ˈrædɪkl/",m:"adj. 根本的；激进的",l:"高频"},
+  "reconcile":{p:"/ˈrekənsaɪl/",m:"v. 调和；和解",l:"高频"},
+  "regulate":{p:"/ˈreɡjuleɪt/",m:"v. 调节；管理",l:"高频"},
+  "reliance":{p:"/rɪˈlaɪəns/",m:"n. 依赖；信赖",l:"中频"},
+  "render":{p:"/ˈrendər/",m:"v. 使成为；提供",l:"高频"},
+  "reputation":{p:"/ˌrepjuˈteɪʃn/",m:"n. 名声；声誉",l:"高频"},
+  "resemble":{p:"/rɪˈzembl/",m:"v. 像；类似于",l:"中频"},
+  "resilient":{p:"/rɪˈzɪliənt/",m:"adj. 有弹性的；适应力强的",l:"高频"},
+  "revenue":{p:"/ˈrevənjuː/",m:"n. 收入；税收",l:"中频"},
+  "revolution":{p:"/ˌrevəˈluːʃn/",m:"n. 革命；变革",l:"高频"},
+  "rigorous":{p:"/ˈrɪɡərəs/",m:"adj. 严格的；严密的",l:"高频"},
+  "scenario":{p:"/sɪˈnɑːriəʊ/",m:"n. 情景；方案",l:"中频"},
+  "skeptical":{p:"/ˈskeptɪkl/",m:"adj. 怀疑的",l:"高频"},
+  "sovereign":{p:"/ˈsɒvrɪn/",m:"n. 君主 adj. 拥有主权的",l:"高频"},
+  "speculate":{p:"/ˈspekjuleɪt/",m:"v. 推测；投机",l:"高频"},
+  "stimulus":{p:"/ˈstɪmjələs/",m:"n. 刺激；激励",l:"高频"},
+  "straightforward":{p:"/ˌstreɪtˈfɔːrwərd/",m:"adj. 简单的；直接的",l:"中频"},
+  "strategy":{p:"/ˈstrætədʒi/",m:"n. 策略；战略",l:"高频"},
+  "subordinate":{p:"/səˈbɔːrdɪnət/",m:"adj. 下级的 n. 下属",l:"高频"},
+  "subsequent":{p:"/ˈsʌbsɪkwənt/",m:"adj. 随后的",l:"高频"},
+  "substantial":{p:"/səbˈstænʃl/",m:"adj. 大量的；实质的",l:"高频"},
+  "subtle":{p:"/ˈsʌtl/",m:"adj. 微妙的；精细的",l:"高频"},
+  "sufficient":{p:"/səˈfɪʃnt/",m:"adj. 足够的",l:"高频"},
+  "superficial":{p:"/ˌsuːpərˈfɪʃl/",m:"adj. 表面的；肤浅的",l:"高频"},
+  "surplus":{p:"/ˈsɜːrplʌs/",m:"n. 过剩；盈余",l:"中频"},
+  "sustainable":{p:"/səˈsteɪnəbl/",m:"adj. 可持续的",l:"高频"},
+  "symptom":{p:"/ˈsɪmptəm/",m:"n. 症状；征兆",l:"中频"},
+  "synthesis":{p:"/ˈsɪnθəsɪs/",m:"n. 综合；合成",l:"高频"},
+  "threshold":{p:"/ˈθreʃhəʊld/",m:"n. 门槛；临界值",l:"高频"},
+  "transform":{p:"/trænsˈfɔːrm/",m:"v. 转变；改造",l:"高频"},
+  "transition":{p:"/trænˈzɪʃn/",m:"n. 过渡；转变",l:"高频"},
+  "trigger":{p:"/ˈtrɪɡər/",m:"v. 触发；引起",l:"高频"},
+  "trivial":{p:"/ˈtrɪviəl/",m:"adj. 琐碎的",l:"高频"},
+  "ultimate":{p:"/ˈʌltɪmət/",m:"adj. 最终的；根本的",l:"高频"},
+  "undergo":{p:"/ˌʌndərˈɡəʊ/",m:"v. 经历；经受",l:"高频"},
+  "undermine":{p:"/ˌʌndərˈmaɪn/",m:"v. 削弱；破坏",l:"高频"},
+  "unprecedented":{p:"/ʌnˈpresɪdentɪd/",m:"adj. 前所未有的",l:"高频"},
+  "utilize":{p:"/ˈjuːtəlaɪz/",m:"v. 利用；使用",l:"高频"},
+  "valid":{p:"/ˈvælɪd/",m:"adj. 有效的；合理的",l:"高频"},
+  "versatile":{p:"/ˈvɜːrsətaɪl/",m:"adj. 多才多艺的",l:"高频"},
+  "violate":{p:"/ˈvaɪəleɪt/",m:"v. 违反；侵犯",l:"高频"},
+  "virtual":{p:"/ˈvɜːrtʃuəl/",m:"adj. 虚拟的；实质上的",l:"高频"},
+  "vulnerable":{p:"/ˈvʌlnərəbl/",m:"adj. 脆弱的",l:"高频"},
+  "widespread":{p:"/ˈwaɪdspred/",m:"adj. 广泛的",l:"高频"},
+  "yield":{p:"/jiːld/",m:"v. 产生；屈服 n. 产量",l:"高频"},
+  "abolish":{p:"/əˈbɒlɪʃ/",m:"v. 废除；取消",l:"高频"},
+  "absurd":{p:"/əbˈsɜːrd/",m:"adj. 荒谬的",l:"中频"},
+  "abundant":{p:"/əˈbʌndənt/",m:"adj. 丰富的；充裕的",l:"高频"},
+  "adverse":{p:"/ˈædvɜːrs/",m:"adj. 不利的；相反的",l:"高频"},
+  "aggregate":{p:"/ˈæɡrɪɡət/",m:"v. 聚集；合计",l:"高频"},
+  "assert":{p:"/əˈsɜːrt/",m:"v. 断言；主张",l:"高频"},
+  "comply":{p:"/kəmˈplaɪ/",m:"v. 遵守；服从",l:"高频"},
+  "conspicuous":{p:"/kənˈspɪkjuəs/",m:"adj. 显眼的；引人注目的",l:"高频"},
+  "deem":{p:"/diːm/",m:"v. 认为；视为",l:"高频"},
+  "depict":{p:"/dɪˈpɪkt/",m:"v. 描绘；描述",l:"高频"},
+  "disclose":{p:"/dɪsˈkləʊz/",m:"v. 披露；揭露",l:"中频"},
+  "disrupt":{p:"/dɪsˈrʌpt/",m:"v. 扰乱；中断",l:"高频"},
+  "elicit":{p:"/ɪˈlɪsɪt/",m:"v. 引出；探出",l:"高频"},
+  "embody":{p:"/ɪmˈbɒdi/",m:"v. 体现；包含",l:"高频"},
+  "entail":{p:"/ɪnˈteɪl/",m:"v. 需要；使必要",l:"高频"},
+  "exempt":{p:"/ɪɡˈzempt/",m:"v. 免除 adj. 被免除的",l:"高频"},
+  "flourish":{p:"/ˈflʌrɪʃ/",m:"v. 繁荣；兴旺",l:"中频"},
+  "hamper":{p:"/ˈhæmpər/",m:"v. 阻碍；妨碍",l:"高频"},
+  "impair":{p:"/ɪmˈpeər/",m:"v. 损害；削弱",l:"高频"},
+  "induce":{p:"/ɪnˈdjuːs/",m:"v. 引起；诱导",l:"高频"},
+  "inhibit":{p:"/ɪnˈhɪbɪt/",m:"v. 抑制；阻止",l:"高频"},
+  "magnify":{p:"/ˈmæɡnɪfaɪ/",m:"v. 放大；夸大",l:"高频"},
+  "obsolete":{p:"/ˈɒbsəliːt/",m:"adj. 过时的；废弃的",l:"高频"},
+  "offset":{p:"/ˈɒfset/",m:"v. 抵消；补偿",l:"高频"},
+  "plunge":{p:"/plʌndʒ/",m:"v./n. 暴跌；陷入",l:"中频"},
+  "refute":{p:"/rɪˈfjuːt/",m:"v. 反驳；驳斥",l:"高频"},
+  "reluctant":{p:"/rɪˈlʌktənt/",m:"adj. 不情愿的",l:"中频"},
+  "remedy":{p:"/ˈremədi/",m:"n. 补救办法 v. 补救",l:"高频"},
+  "spur":{p:"/spɜːr/",m:"v. 激励；刺激",l:"高频"},
+  "suppress":{p:"/səˈpres/",m:"v. 压制；抑制",l:"高频"},
+  "testify":{p:"/ˈtestɪfaɪ/",m:"v. 作证；证明",l:"高频"},
+  "uphold":{p:"/ʌpˈhəʊld/",m:"v. 支持；维持（原判）",l:"高频"},
+  "ventilate":{p:"/ˈventɪleɪt/",m:"v. 通风；公开讨论",l:"中频"},
+  "verify":{p:"/ˈverɪfaɪ/",m:"v. 核实；证实",l:"高频"},
+  "withstand":{p:"/wɪðˈstænd/",m:"v. 承受；经受住",l:"高频"},
+  "wreck":{p:"/rek/",m:"v. 破坏；毁坏 n. 残骸",l:"中频"}
+};
+
+/** 查找词汇 */
+function lookupVocab(word) {
+  const k = word.toLowerCase().replace(/[^a-z]/g,'');
+  if (VOCAB_DB[k]) return {word:k,...VOCAB_DB[k]};
+  // Try stemming
+  const stems = [k.replace(/ing$/,''),k.replace(/ed$/,''),k.replace(/s$/,''),k.replace(/ly$/,''),k.replace(/tion$/,''),k.replace(/ment$/,''),k.replace(/ness$/,''),k.replace(/able$/,''),k.replace(/ible$/,''),k.replace(/al$/,''),k.replace(/ive$/,''),k.replace(/ous$/,''),k.replace(/ize$/,''),k.replace(/ise$/,'')];
+  for (const s of stems) { if (VOCAB_DB[s]) return {word:s,...VOCAB_DB[s]}; }
+  return null;
+}
+
+/** 示例文章数据 */
+const NEWS_DATA = [
+  {
+    id: 1, date: "2026-05-27", category: "科技", difficulty: "英语一",
+    title: "The AI Revolution in Education: Promise and Peril",
+    titleCn: "教育的AI革命：前景与风险",
+    source: "The Economist",
+    summary: "Artificial intelligence is transforming education, offering personalized learning while raising concerns about academic integrity and equity.",
+    summaryCn: "人工智能正在改变教育，提供个性化学习的同时，也引发了对学术诚信和公平性的担忧。",
+    isFavorited: false,
+    content: [
+      {en:"<span class='vocab-highlight' data-word='artificial'>Artificial</span> intelligence is rapidly <span class='vocab-highlight' data-word='transform'>transforming</span> the <span class='vocab-highlight' data-word='landscape'>landscape</span> of education, offering <span class='vocab-highlight' data-word='unprecedented'>unprecedented</span> opportunities to personalize learning while <span class='vocab-highlight' data-word='simultaneously'>simultaneously</span> raising <span class='vocab-highlight' data-word='profound'>profound</span> questions about <span class='vocab-highlight' data-word='academic'>academic</span> <span class='vocab-highlight' data-word='integrity'>integrity</span> and the very nature of knowledge <span class='vocab-highlight' data-word='acquisition'>acquisition</span>.",cn:"人工智能正在快速改变教育格局，提供了前所未有的个性化学习机会，同时也引发了对学术诚信和知识获取本质的深刻质疑。"},
+      {en:"In classrooms across the globe, AI-powered <span class='vocab-highlight' data-word='tutoring'>tutoring</span> systems are now <span class='vocab-highlight' data-word='capable'>capable</span> of adapting to <span class='vocab-highlight' data-word='individual'>individual</span> students' learning paces, identifying knowledge gaps with <span class='vocab-highlight' data-word='remarkable'>remarkable</span> <span class='vocab-highlight' data-word='precision'>precision</span>, and generating <span class='vocab-highlight' data-word='customized'>customized</span> exercises that target <span class='vocab-highlight' data-word='specific'>specific</span> weaknesses. <span class='sentence-mark' data-sid='0'>A recent study by researchers at Stanford University found that students who <span class='vocab-highlight' data-word='supplemented'>supplemented</span> their coursework with AI tutoring <span class='vocab-highlight' data-word='demonstrated'>demonstrated</span> a 34 percent improvement in problem-solving <span class='vocab-highlight' data-word='capabilities'>capabilities</span> compared to those who relied <span class='vocab-highlight' data-word='solely'>solely</span> on <span class='vocab-highlight' data-word='traditional'>traditional</span> methods.</span>",cn:"在全球各地的教室中，AI驱动的辅导系统现在能够适应个体学生的学习节奏，以卓越的精确度识别知识差距，并生成针对特定弱点的定制练习。斯坦福大学研究人员最近的一项研究发现，与仅依靠传统方法的学生相比，使用AI辅导补充课程的学生在解决问题能力方面表现出34%的提升。"},
+      {en:"However, the <span class='vocab-highlight' data-word='proliferation'>proliferation</span> of <span class='vocab-highlight' data-word='generative'>generative</span> AI tools has also <span class='vocab-highlight' data-word='triggered'>triggered</span> <span class='vocab-highlight' data-word='considerable'>considerable</span> <span class='vocab-highlight' data-word='anxiety'>anxiety</span> among <span class='vocab-highlight' data-word='educators'>educators</span>. The ease with which students can now produce <span class='vocab-highlight' data-word='essays'>essays</span>, solve <span class='vocab-highlight' data-word='complex'>complex</span> mathematical problems, and even <span class='vocab-highlight' data-word='generate'>generate</span> computer code using large language models has <span class='vocab-highlight' data-word='fundamentally'>fundamentally</span> <span class='vocab-highlight' data-word='challenged'>challenged</span> <span class='vocab-highlight' data-word='conventional'>conventional</span> <span class='vocab-highlight' data-word='approaches'>approaches</span> to <span class='vocab-highlight' data-word='assessment'>assessment</span>.",cn:"然而，生成式AI工具的激增也引发了教育者的极大焦虑。学生现在可以使用大语言模型轻松地写论文、解决复杂数学问题甚至生成计算机代码，这从根本上挑战了传统的评估方法。"},
+      {en:"<span class='sentence-mark' data-sid='1'>Many <span class='vocab-highlight' data-word='institutions'>institutions</span> have found themselves caught in an uncomfortable <span class='vocab-highlight' data-word='dilemma'>dilemma</span>: how to <span class='vocab-highlight' data-word='embrace'>embrace</span> the <span class='vocab-highlight' data-word='undeniable'>undeniable</span> <span class='vocab-highlight' data-word='benefits'>benefits</span> of AI while <span class='vocab-highlight' data-word='safeguarding'>safeguarding</span> the development of <span class='vocab-highlight' data-word='critical'>critical</span> thinking skills that form the <span class='vocab-highlight' data-word='cornerstone'>cornerstone</span> of higher education.</span>",cn:"许多机构发现自己陷入了两难境地：如何接纳AI不可否认的好处，同时保护构成高等教育基石的批判性思维能力的培养。"},
+      {en:"<span class='vocab-highlight' data-word='ultimately'>Ultimately</span>, the question may not be whether AI will change education, but whether <span class='vocab-highlight' data-word='educators'>educators</span> and <span class='vocab-highlight' data-word='institutions'>institutions</span> can <span class='vocab-highlight' data-word='adapt'>adapt</span> quickly enough to <span class='vocab-highlight' data-word='harness'>harness</span> its <span class='vocab-highlight' data-word='potential'>potential</span> while <span class='vocab-highlight' data-word='mitigating'>mitigating</span> its risks.",cn:"最终，问题也许不是AI是否会改变教育，而是教育者和机构能否足够快地适应，以利用其潜力的同时减轻其风险。"}
+    ],
+    vocabWords: ["artificial","unprecedented","profound","acquisition","proliferation","triggered","fundamentally","conventional","dilemma","embrace","ultimately","mitigating","adapt","harness","supplemented","demonstrated","precision"],
+    sentences: [
+      {original:"A recent study by researchers at Stanford University found that students who supplemented their coursework with AI tutoring demonstrated a 34 percent improvement in problem-solving capabilities compared to those who relied solely on traditional methods.",translation:"斯坦福大学研究人员最近的一项研究发现，与仅依靠传统方法的学生相比，使用AI辅导补充课程的学生在解决问题能力方面表现出34%的提升。",structure:["主句: A recent study... found that...","宾语从句: students... demonstrated a 34 percent improvement","定语从句: who supplemented their coursework with AI tutoring","比较状语: compared to those who relied solely on traditional methods"],points:["宾语从句嵌套定语从句","compared to 比较结构","supplement...with... 搭配用法"]},
+      {original:"Many institutions have found themselves caught in an uncomfortable dilemma: how to embrace the undeniable benefits of AI while safeguarding the development of critical thinking skills that form the cornerstone of higher education.",translation:"许多机构发现自己陷入了两难境地：如何接纳AI不可否认的好处，同时保护构成高等教育基石的批判性思维能力的培养。",structure:["主句: Many institutions have found themselves caught in...","同位语从句(冒号后): how to embrace... while safeguarding...","定语从句: that form the cornerstone of higher education"],points:["find oneself + 过去分词 表示'发现自己处于...状态'","冒号引导的同位语解释","while + 现在分词 表示'同时...'的省略结构"]}
+    ]
+  },
+  {
+    id: 2, date: "2026-05-27", category: "环境", difficulty: "英语二",
+    title: "Beyond Carbon Neutrality: The Race to Reverse Climate Change",
+    titleCn: "超越碳中和：扭转气候变化的竞赛",
+    source: "Nature Climate Change",
+    summary: "Scientists argue that carbon neutrality alone is insufficient, and humanity must pivot toward actively removing greenhouse gases from the atmosphere.",
+    summaryCn: "科学家认为仅碳中和不够，人类必须转向主动从大气中移除温室气体。",
+    isFavorited: false,
+    content: [
+      {en:"For <span class='vocab-highlight' data-word='decades'>decades</span>, the international <span class='vocab-highlight' data-word='discourse'>discourse</span> on climate change has been <span class='vocab-highlight' data-word='dominated'>dominated</span> by the <span class='vocab-highlight' data-word='concept'>concept</span> of carbon <span class='vocab-highlight' data-word='neutrality'>neutrality</span>. Yet a growing <span class='vocab-highlight' data-word='chorus'>chorus</span> of scientists now <span class='vocab-highlight' data-word='argue'>argue</span> that <span class='vocab-highlight' data-word='neutrality'>neutrality</span> alone will be <span class='vocab-highlight' data-word='insufficient'>insufficient</span> to <span class='vocab-highlight' data-word='avert'>avert</span> <span class='vocab-highlight' data-word='catastrophic'>catastrophic</span> climate <span class='vocab-highlight' data-word='outcomes'>outcomes</span>.",cn:"几十年来，国际社会关于气候变化的讨论一直被碳中和概念所主导。然而越来越多科学家认为，仅凭碳中和不足以避免灾难性的气候后果。"},
+      {en:"<span class='sentence-mark' data-sid='0'>The <span class='vocab-highlight' data-word='rationale'>rationale</span> behind this <span class='vocab-highlight' data-word='shift'>shift</span> is rooted in <span class='vocab-highlight' data-word='sobering'>sobering</span> <span class='vocab-highlight' data-word='empirical'>empirical</span> data: <span class='vocab-highlight' data-word='despite'>despite</span> the <span class='vocab-highlight' data-word='proliferation'>proliferation</span> of <span class='vocab-highlight' data-word='renewable'>renewable</span> energy <span class='vocab-highlight' data-word='infrastructure'>infrastructure</span>, global carbon <span class='vocab-highlight' data-word='emissions'>emissions</span> reached an all-time high in 2025, <span class='vocab-highlight' data-word='surpassing'>surpassing</span> 37 billion metric tons.</span>",cn:"这一转变背后的理由植根于令人警醒的实证数据：尽管可再生能源基础设施激增，2025年全球碳排放量仍创历史新高，超过370亿公吨。"},
+      {en:"<span class='vocab-highlight' data-word='emerging'>Emerging</span> carbon removal <span class='vocab-highlight' data-word='technologies'>technologies</span> have <span class='vocab-highlight' data-word='consequently'>consequently</span> <span class='vocab-highlight' data-word='attracted'>attracted</span> <span class='vocab-highlight' data-word='substantial'>substantial</span> <span class='vocab-highlight' data-word='investment'>investment</span>. <span class='vocab-highlight' data-word='proponents'>Proponents</span> <span class='vocab-highlight' data-word='emphasize'>emphasize</span> their <span class='vocab-highlight' data-word='potential'>potential</span> to <span class='vocab-highlight' data-word='complement'>complement</span> <span class='vocab-highlight' data-word='aggressive'>aggressive</span> emission <span class='vocab-highlight' data-word='reductions'>reductions</span>.",cn:"新兴的碳移除技术因此吸引了大量投资。支持者强调其补充积极减排的潜力。"},
+      {en:"<span class='sentence-mark' data-sid='1'>Nature-based solutions offer an <span class='vocab-highlight' data-word='alternative'>alternative</span>, and <span class='vocab-highlight' data-word='arguably'>arguably</span> more <span class='vocab-highlight' data-word='immediate'>immediate</span>, <span class='vocab-highlight' data-word='approach'>approach</span>, with <span class='vocab-highlight' data-word='reforestation'>reforestation</span> <span class='vocab-highlight' data-word='initiatives'>initiatives</span> and <span class='vocab-highlight' data-word='regenerative'>regenerative</span> <span class='vocab-highlight' data-word='agricultural'>agricultural</span> <span class='vocab-highlight' data-word='practices'>practices</span> <span class='vocab-highlight' data-word='demonstrating'>demonstrating</span> <span class='vocab-highlight' data-word='remarkable'>remarkable</span> <span class='vocab-highlight' data-word='efficacy'>efficacy</span> in <span class='vocab-highlight' data-word='sequestering'>sequestering</span> carbon while <span class='vocab-highlight' data-word='simultaneously'>simultaneously</span> <span class='vocab-highlight' data-word='enhancing'>enhancing</span> <span class='vocab-highlight' data-word='biodiversity'>biodiversity</span>.</span>",cn:"基于自然的解决方案提供了一种替代方案，可以说是更直接的方法，再造林倡议和再生农业实践在固碳方面表现出显著功效，同时增强了生物多样性。"}
+    ],
+    vocabWords: ["discourse","neutrality","insufficient","avert","catastrophic","rationale","empirical","proliferation","infrastructure","substantial","proponents","complement","reforestation","efficacy","sequestering","biodiversity"],
+    sentences: [
+      {original:"The rationale behind this shift is rooted in sobering empirical data: despite the proliferation of renewable energy infrastructure, global carbon emissions reached an all-time high in 2025, surpassing 37 billion metric tons.",translation:"这一转变背后的理由植根于令人警醒的实证数据：尽管可再生能源基础设施激增，2025年全球碳排放量仍创历史新高，超过370亿公吨。",structure:["主句: The rationale... is rooted in... empirical data","让步状语: despite the proliferation of renewable energy infrastructure","分词作伴随状语: surpassing 37 billion metric tons"],points:["be rooted in 源自于...","despite 引导让步关系","现在分词作结果状语"]},
+      {original:"Nature-based solutions offer an alternative, and arguably more immediate, approach, with reforestation initiatives and regenerative agricultural practices demonstrating remarkable efficacy in sequestering carbon while simultaneously enhancing biodiversity.",translation:"基于自然的解决方案提供了一种替代方案，可以说是更直接的方法，再造林倡议和再生农业实践在固碳方面表现出显著功效，同时增强了生物多样性。",structure:["主句: Nature-based solutions offer an alternative... approach","插入语: and arguably more immediate","with 复合结构: with... practices demonstrating...","while + 现在分词: while simultaneously enhancing biodiversity"],points:["插入语的识别和翻译","with + 名词 + 现在分词 独立主格结构","while + 分词省略结构"]}
+    ]
+  },
+  {
+    id: 3, date: "2026-05-28", category: "经济", difficulty: "英语一",
+    title: "Global Supply Chains in the Era of Strategic Competition",
+    titleCn: "战略竞争时代的全球供应链",
+    source: "Financial Times",
+    summary: "The architecture of global trade is shifting from hyper-efficient supply chains toward resilience, redundancy, and geopolitical alignment.",
+    summaryCn: "全球贸易架构正从超高效供应链转向韧性、冗余和地缘政治一致性。",
+    isFavorited: false,
+    content: [
+      {en:"The <span class='vocab-highlight' data-word='architecture'>architecture</span> of global trade is <span class='vocab-highlight' data-word='undergoing'>undergoing</span> its most <span class='vocab-highlight' data-word='significant'>significant</span> <span class='vocab-highlight' data-word='transformation'>transformation</span> since the end of the Cold War. The <span class='vocab-highlight' data-word='era'>era</span> of <span class='vocab-highlight' data-word='hyper-efficient'>hyper-efficient</span>, just-in-time supply chains <span class='vocab-highlight' data-word='optimized'>optimized</span> <span class='vocab-highlight' data-word='solely'>solely</span> for cost <span class='vocab-highlight' data-word='minimization'>minimization</span> is giving way to a new <span class='vocab-highlight' data-word='paradigm'>paradigm</span>.",cn:"全球贸易架构正在经历冷战结束以来最重大的转变。仅以成本最小化为优化的超高效、准时制供应链时代，正在让位于一种新范式。"},
+      {en:"<span class='sentence-mark' data-sid='0'>Governments across the <span class='vocab-highlight' data-word='industrial'>industrial</span> world are responding with <span class='vocab-highlight' data-word='unprecedented'>unprecedented</span> <span class='vocab-highlight' data-word='industrial'>industrial</span> <span class='vocab-highlight' data-word='policy'>policy</span> <span class='vocab-highlight' data-word='interventions'>interventions</span>, <span class='vocab-highlight' data-word='allocating'>allocating</span> billions in <span class='vocab-highlight' data-word='subsidies'>subsidies</span> for <span class='vocab-highlight' data-word='domestic'>domestic</span> <span class='vocab-highlight' data-word='semiconductor'>semiconductor</span> <span class='vocab-highlight' data-word='manufacturing'>manufacturing</span>.</span>",cn:"工业世界的各国政府以前所未有的产业政策干预作为回应，拨出数十亿补贴用于国内半导体制造。"},
+      {en:"The <span class='vocab-highlight' data-word='economic'>economic</span> <span class='vocab-highlight' data-word='logic'>logic</span> <span class='vocab-highlight' data-word='underpinning'>underpinning</span> these <span class='vocab-highlight' data-word='policies'>policies</span> <span class='vocab-highlight' data-word='represents'>represents</span> a <span class='vocab-highlight' data-word='departure'>departure</span> from <span class='vocab-highlight' data-word='decades'>decades</span> of <span class='vocab-highlight' data-word='orthodox'>orthodox</span> free-trade <span class='vocab-highlight' data-word='doctrine'>doctrine</span>.",cn:"支撑这些政策的经济逻辑代表着对数十年来正统自由贸易学说的背离。"},
+      {en:"<span class='sentence-mark' data-sid='1'>The <span class='vocab-highlight' data-word='transition'>transition</span> toward more <span class='vocab-highlight' data-word='resilient'>resilient</span> supply chains <span class='vocab-highlight' data-word='carries'>carries</span> <span class='vocab-highlight' data-word='substantial'>substantial</span> costs, as <span class='vocab-highlight' data-word='diversification'>diversification</span> <span class='vocab-highlight' data-word='inevitably'>inevitably</span> <span class='vocab-highlight' data-word='entails'>entails</span> <span class='vocab-highlight' data-word='sacrificing'>sacrificing</span> some of the <span class='vocab-highlight' data-word='efficiency'>efficiency</span> gains that made <span class='vocab-highlight' data-word='globalization'>globalization</span> an <span class='vocab-highlight' data-word='engine'>engine</span> of <span class='vocab-highlight' data-word='unprecedented'>unprecedented</span> <span class='vocab-highlight' data-word='prosperity'>prosperity</span>.</span>",cn:"向更具韧性的供应链的过渡带来了巨大成本，因为多元化不可避免地需要牺牲一些使全球化成为前所未有繁荣引擎的效率收益。"}
+    ],
+    vocabWords: ["architecture","transformation","paradigm","unprecedented","subsidies","domestic","orthodox","doctrine","resilient","diversification","inevitably","entails","prosperity","interventions"],
+    sentences: [
+      {original:"Governments across the industrial world are responding with unprecedented industrial policy interventions, allocating billions in subsidies for domestic semiconductor manufacturing.",translation:"工业世界的各国政府以前所未有的产业政策干预作为回应，拨出数十亿补贴用于国内半导体制造。",structure:["主句: Governments... are responding with... interventions","分词作伴随状语: allocating billions in subsidies for..."],points:["respond with 以...回应","现在分词短语作伴随状语","unprecedented 高频考研词汇"]},
+      {original:"The transition toward more resilient supply chains carries substantial costs, as diversification inevitably entails sacrificing some of the efficiency gains that made globalization an engine of unprecedented prosperity.",translation:"向更具韧性的供应链的过渡带来了巨大成本，因为多元化不可避免地需要牺牲一些使全球化成为前所未有繁荣引擎的效率收益。",structure:["主句: The transition... carries substantial costs","原因状语从句: as diversification... entails sacrificing...","定语从句: that made globalization an engine of unprecedented prosperity"],points:["as 引导原因状语从句","entail + 动名词 需要做某事","定语从句修饰 efficiency gains"]}
+    ]
+  },
+  {
+    id: 4, date: "2026-05-28", category: "社会", difficulty: "英语二",
+    title: "Remote Work at a Crossroads: Data Reveals the New Normal",
+    titleCn: "远程办公的十字路口：数据揭示新常态",
+    source: "Harvard Business Review",
+    summary: "Four years of data show approximately 28% of paid workdays are now performed from home, with no signs of reversing.",
+    summaryCn: "四年数据显示约28%的付薪工作日在家完成，没有逆转迹象。",
+    isFavorited: false,
+    content: [
+      {en:"When the pandemic <span class='vocab-highlight' data-word='compelled'>compelled</span> millions of workers to <span class='vocab-highlight' data-word='abandon'>abandon</span> their offices, many <span class='vocab-highlight' data-word='commentators'>commentators</span> <span class='vocab-highlight' data-word='predicted'>predicted</span> the <span class='vocab-highlight' data-word='shift'>shift</span> would prove <span class='vocab-highlight' data-word='temporary'>temporary</span>. Four years later, the data tells a more <span class='vocab-highlight' data-word='nuanced'>nuanced</span> story.",cn:"当疫情迫使数百万工作者离开办公室时，许多评论员预测这种转变将是暂时的。四年后，数据讲述了一个更加微妙的故事。"},
+      {en:"A <span class='vocab-highlight' data-word='comprehensive'>comprehensive</span> study by Stanford <span class='vocab-highlight' data-word='researchers'>researchers</span> found that <span class='vocab-highlight' data-word='approximately'>approximately</span> 28 percent of all paid workdays are now <span class='vocab-highlight' data-word='performed'>performed</span> from home, <span class='vocab-highlight' data-word='compared'>compared</span> to roughly 5 percent before the pandemic.",cn:"斯坦福大学研究者的一项综合研究发现，约28%的付薪工作日现在在家完成，而疫情前约为5%。"},
+      {en:"<span class='sentence-mark' data-sid='0'>For tasks <span class='vocab-highlight' data-word='requiring'>requiring</span> <span class='vocab-highlight' data-word='sustained'>sustained</span>, <span class='vocab-highlight' data-word='uninterrupted'>uninterrupted</span> <span class='vocab-highlight' data-word='concentration'>concentration</span>, remote work often <span class='vocab-highlight' data-word='enhances'>enhances</span> <span class='vocab-highlight' data-word='productivity'>productivity</span> by <span class='vocab-highlight' data-word='eliminating'>eliminating</span> the <span class='vocab-highlight' data-word='distractions'>distractions</span> <span class='vocab-highlight' data-word='inherent'>inherent</span> in open-plan offices.</span>",cn:"对于需要持续、不间断专注的任务，远程办公通常通过消除开放式办公室固有的干扰来提高生产力。"},
+      {en:"<span class='sentence-mark' data-sid='1'>The concept of '<span class='vocab-highlight' data-word='proximity'>proximity</span> <span class='vocab-highlight' data-word='bias'>bias</span>' has <span class='vocab-highlight' data-word='emerged'>emerged</span>, <span class='vocab-highlight' data-word='suggesting'>suggesting</span> that <span class='vocab-highlight' data-word='physical'>physical</span> <span class='vocab-highlight' data-word='proximity'>proximity</span> to <span class='vocab-highlight' data-word='senior'>senior</span> <span class='vocab-highlight' data-word='leadership'>leadership</span> <span class='vocab-highlight' data-word='confers'>confers</span> <span class='vocab-highlight' data-word='substantial'>substantial</span> <span class='vocab-highlight' data-word='career'>career</span> <span class='vocab-highlight' data-word='advantages'>advantages</span> that are <span class='vocab-highlight' data-word='disproportionately'>disproportionately</span> <span class='vocab-highlight' data-word='available'>available</span> to those who work in person.</span>",cn:"'邻近偏见'概念已经出现，表明与高层领导的物理邻近会带来显著的职业优势，而这些优势不成比例地倾向于那些线下办公的人。"}
+    ],
+    vocabWords: ["compelled","abandon","temporary","nuanced","comprehensive","approximately","sustained","enhances","inherent","proximity","bias","confers","disproportionately"],
+    sentences: [
+      {original:"For tasks requiring sustained, uninterrupted concentration, remote work often enhances productivity by eliminating the distractions inherent in open-plan offices.",translation:"对于需要持续、不间断专注的任务，远程办公通常通过消除开放式办公室固有的干扰来提高生产力。",structure:["状语: For tasks requiring sustained, uninterrupted concentration","主句: remote work often enhances productivity","方式状语: by eliminating the distractions","定语: inherent in open-plan offices"],points:["requiring... 现在分词作定语","by + doing 方式状语","inherent in 形容词短语作后置定语"]},
+      {original:"The concept of 'proximity bias' has emerged, suggesting that physical proximity to senior leadership confers substantial career advantages that are disproportionately available to those who work in person.",translation:"'邻近偏见'概念已经出现，表明与高层领导的物理邻近会带来显著的职业优势，而这些优势不成比例地倾向于那些线下办公的人。",structure:["主句: The concept... has emerged","分词作伴随状语: suggesting that...","宾语从句: physical proximity... confers... advantages","定语从句1: that are disproportionately available to those","定语从句2: who work in person"],points:["现在分词 suggesting 引出具体内容","三层从句嵌套结构","disproportionately 高频副词"]}
+    ]
+  },
+  {
+    id: 5, date: "2026-05-29", category: "科技", difficulty: "英语一",
+    title: "The Microbiome Revolution: Gut Bacteria Redefine Medicine",
+    titleCn: "微生物组革命：肠道细菌重新定义医学",
+    source: "NEJM",
+    summary: "The human microbiome has emerged as a promising frontier in biomedicine, with implications extending far beyond digestion.",
+    summaryCn: "人类微生物组已成为生物医学一个有前景的前沿领域，其影响远超消化系统。",
+    isFavorited: false,
+    content: [
+      {en:"The human body plays host to <span class='vocab-highlight' data-word='trillions'>trillions</span> of <span class='vocab-highlight' data-word='microorganisms'>microorganisms</span> that <span class='vocab-highlight' data-word='collectively'>collectively</span> <span class='vocab-highlight' data-word='constitute'>constitute</span> the <span class='vocab-highlight' data-word='microbiome'>microbiome</span>. Once <span class='vocab-highlight' data-word='relegated'>relegated</span> to the <span class='vocab-highlight' data-word='periphery'>periphery</span> of medical research, it has <span class='vocab-highlight' data-word='emerged'>emerged</span> as one of the most <span class='vocab-highlight' data-word='dynamic'>dynamic</span> <span class='vocab-highlight' data-word='frontiers'>frontiers</span> in <span class='vocab-highlight' data-word='contemporary'>contemporary</span> <span class='vocab-highlight' data-word='biomedicine'>biomedicine</span>.",cn:"人体承载着数万亿微生物，它们共同构成微生物组。曾经被置于医学研究边缘的它，现已崛起为当代生物医学最具活力的前沿之一。"},
+      {en:"<span class='sentence-mark' data-sid='0'>Researchers have <span class='vocab-highlight' data-word='identified'>identified</span> <span class='vocab-highlight' data-word='correlations'>correlations</span> — and in some cases, <span class='vocab-highlight' data-word='causal'>causal</span> <span class='vocab-highlight' data-word='relationships'>relationships</span> — between <span class='vocab-highlight' data-word='microbial'>microbial</span> <span class='vocab-highlight' data-word='diversity'>diversity</span> and <span class='vocab-highlight' data-word='conditions'>conditions</span> as <span class='vocab-highlight' data-word='varied'>varied</span> as <span class='vocab-highlight' data-word='obesity'>obesity</span>, <span class='vocab-highlight' data-word='diabetes'>diabetes</span>, and even <span class='vocab-highlight' data-word='depression'>depression</span>.</span>",cn:"研究者已经确认了微生物多样性与肥胖、糖尿病甚至抑郁症等多种疾病之间的相关性——在某些情况下甚至是因果关系。"},
+      {en:"The most <span class='vocab-highlight' data-word='compelling'>compelling</span> <span class='vocab-highlight' data-word='clinical'>clinical</span> <span class='vocab-highlight' data-word='application'>application</span> to date is <span class='vocab-highlight' data-word='fecal'>fecal</span> <span class='vocab-highlight' data-word='microbiota'>microbiota</span> <span class='vocab-highlight' data-word='transplantation'>transplantation</span> (FMT), which has <span class='vocab-highlight' data-word='demonstrated'>demonstrated</span> <span class='vocab-highlight' data-word='remarkable'>remarkable</span> <span class='vocab-highlight' data-word='efficacy'>efficacy</span> for treating <span class='vocab-highlight' data-word='recurrent'>recurrent</span> C. <span class='vocab-highlight' data-word='difficile'>difficile</span> infections.",cn:"迄今为止最引人注目的临床应用是粪菌移植(FMT)，它在治疗复发性艰难梭菌感染方面表现出显著功效。"},
+      {en:"<span class='sentence-mark' data-sid='1'>Despite these <span class='vocab-highlight' data-word='obstacles'>obstacles</span>, the <span class='vocab-highlight' data-word='trajectory'>trajectory</span> of <span class='vocab-highlight' data-word='microbiome'>microbiome</span> research <span class='vocab-highlight' data-word='suggests'>suggests</span> that we are only at the <span class='vocab-highlight' data-word='beginning'>beginning</span> of <span class='vocab-highlight' data-word='understanding'>understanding</span> its <span class='vocab-highlight' data-word='therapeutic'>therapeutic</span> <span class='vocab-highlight' data-word='potential'>potential</span>.</span>",cn:"尽管存在这些障碍，微生物组研究的发展轨迹表明，我们才刚开始理解其治疗潜力。"}
+    ],
+    vocabWords: ["constitute","relegated","periphery","contemporary","correlations","causal","microbial","diversity","compelling","transplantation","efficacy","recurrent","trajectory","therapeutic","obstacles"],
+    sentences: [
+      {original:"Researchers have identified correlations — and in some cases, causal relationships — between microbial diversity and conditions as varied as obesity, diabetes, and even depression.",translation:"研究者已经确认了微生物多样性与肥胖、糖尿病甚至抑郁症等多种疾病之间的相关性——在某些情况下甚至是因果关系。",structure:["主句: Researchers have identified correlations","插入语(破折号): and in some cases, causal relationships","介词短语: between microbial diversity and conditions","as...as 结构: as varied as obesity, diabetes, and even depression"],points:["破折号表示补充说明","between A and B 结构","as + 形容词 + as 用于举例"]},
+      {original:"Despite these obstacles, the trajectory of microbiome research suggests that we are only at the beginning of understanding its therapeutic potential.",translation:"尽管存在这些障碍，微生物组研究的发展轨迹表明，我们才刚开始理解其治疗潜力。",structure:["让步状语: Despite these obstacles","主句: the trajectory... suggests","宾语从句: that we are only at the beginning of understanding..."],points:["Despite + 名词 让步结构","suggest 后接宾语从句","at the beginning of 处于...的开端"]}
+    ]
+  },
+  {
+    id: 6, date: "2026-05-29", category: "文化", difficulty: "英语二",
+    title: "The Streaming Paradox: More Content, Less Shared Culture",
+    titleCn: "流媒体悖论：更多内容，更少共享文化",
+    source: "The Atlantic",
+    summary: "As audiences fragment across platforms, the shared cultural experiences that once bound communities are eroding.",
+    summaryCn: "随着观众分散在各平台，曾经将社区联系在一起的共享文化体验正在被侵蚀。",
+    isFavorited: false,
+    content: [
+      {en:"In the <span class='vocab-highlight' data-word='golden'>golden</span> age of <span class='vocab-highlight' data-word='broadcast'>broadcast</span> television, '<span class='vocab-highlight' data-word='water'>water</span> <span class='vocab-highlight' data-word='cooler'>cooler</span> <span class='vocab-highlight' data-word='moments'>moments</span>' <span class='vocab-highlight' data-word='defined'>defined</span> the <span class='vocab-highlight' data-word='cultural'>cultural</span> <span class='vocab-highlight' data-word='landscape'>landscape</span>. When a <span class='vocab-highlight' data-word='significant'>significant</span> <span class='vocab-highlight' data-word='percentage'>percentage</span> of the <span class='vocab-highlight' data-word='population'>population</span> watched the same program, <span class='vocab-highlight' data-word='shared'>shared</span> viewing <span class='vocab-highlight' data-word='experiences'>experiences</span> <span class='vocab-highlight' data-word='provided'>provided</span> a <span class='vocab-highlight' data-word='common'>common</span> <span class='vocab-highlight' data-word='vocabulary'>vocabulary</span> for social <span class='vocab-highlight' data-word='interaction'>interaction</span>.",cn:"在广播电视的黄金时代，'茶水间时刻'定义了文化景观。当相当大比例的人口观看同一节目时，共享的观看体验为社交互动提供了共同话题。"},
+      {en:"The <span class='vocab-highlight' data-word='streaming'>streaming</span> <span class='vocab-highlight' data-word='revolution'>revolution</span> has <span class='vocab-highlight' data-word='dismantled'>dismantled</span> this model with <span class='vocab-highlight' data-word='breathtaking'>breathtaking</span> speed. Netflix now <span class='vocab-highlight' data-word='commands'>commands</span> over 280 million <span class='vocab-highlight' data-word='subscribers'>subscribers</span> worldwide.",cn:"流媒体革命以惊人速度拆解了这一模式。Netflix现在在全球拥有超过2.8亿订阅用户。"},
+      {en:"<span class='sentence-mark' data-sid='0'>This <span class='vocab-highlight' data-word='abundance'>abundance</span>, however, carries an <span class='vocab-highlight' data-word='ironic'>ironic</span> <span class='vocab-highlight' data-word='consequence'>consequence</span>: as <span class='vocab-highlight' data-word='audiences'>audiences</span> <span class='vocab-highlight' data-word='fragment'>fragment</span> across an ever-<span class='vocab-highlight' data-word='expanding'>expanding</span> <span class='vocab-highlight' data-word='universe'>universe</span> of <span class='vocab-highlight' data-word='platforms'>platforms</span> and <span class='vocab-highlight' data-word='niches'>niches</span>, the <span class='vocab-highlight' data-word='shared'>shared</span> <span class='vocab-highlight' data-word='cultural'>cultural</span> <span class='vocab-highlight' data-word='experiences'>experiences</span> that once <span class='vocab-highlight' data-word='bound'>bound</span> <span class='vocab-highlight' data-word='communities'>communities</span> together are <span class='vocab-highlight' data-word='eroding'>eroding</span>.</span>",cn:"然而，这种丰富性带来了一种具有讽刺意味的后果：随着观众分散在不断扩大的平台和小众内容宇宙中，曾经将社区联系在一起的共享文化体验正在被侵蚀。"},
+      {en:"<span class='sentence-mark' data-sid='1'>Research <span class='vocab-highlight' data-word='substantiates'>substantiates</span> this concern: the <span class='vocab-highlight' data-word='percentage'>percentage</span> of Americans who <span class='vocab-highlight' data-word='reported'>reported</span> watching a program that 'most people they know also watched' <span class='vocab-highlight' data-word='declined'>declined</span> from 67 percent in 2002 to 23 percent in 2025.</span>",cn:"研究证实了这一担忧：报告观看'大多数他们认识的人也观看的'节目的美国人比例从2002年的67%下降到2025年的23%。"}
+    ],
+    vocabWords: ["landscape","dismantled","breathtaking","abundance","ironic","consequence","fragment","niches","eroding","substantiates","declined"],
+    sentences: [
+      {original:"This abundance, however, carries an ironic consequence: as audiences fragment across an ever-expanding universe of platforms and niches, the shared cultural experiences that once bound communities together are eroding.",translation:"然而，这种丰富性带来了一种具有讽刺意味的后果：随着观众分散在不断扩大的平台和小众内容宇宙中，曾经将社区联系在一起的共享文化体验正在被侵蚀。",structure:["主句: This abundance... carries an ironic consequence","时间状语从句: as audiences fragment across...","定语从句: that once bound communities together"],points:["however 插入语表示转折","冒号引出具体说明","as 引导时间状语从句","bound 为 bind 的过去式"]},
+      {original:"Research substantiates this concern: the percentage of Americans who reported watching a program that 'most people they know also watched' declined from 67 percent in 2002 to 23 percent in 2025.",translation:"研究证实了这一担忧：报告观看'大多数他们认识的人也观看的'节目的美国人比例从2002年的67%下降到2025年的23%。",structure:["主句: Research substantiates this concern","同位语(冒号后): the percentage... declined from 67%... to 23%","定语从句1: who reported watching a program","定语从句2: that 'most people they know also watched'"],points:["substantiates 证实，高频词汇","decline from... to... 从...下降到...","多层定语从句嵌套"]}
+    ]
+  }
+];
+
+// ================================================================
+//  STATE MANAGEMENT
+// ================================================================
+
+const STATE = {
+  view: 'home',
+  dark: localStorage.getItem('de_dark') === '1',
+  showChinese: localStorage.getItem('de_showCn') !== '0',
+  vocabBook: JSON.parse(localStorage.getItem('de_vocabBook') || '[]'),
+  favorites: JSON.parse(localStorage.getItem('de_favs') || '[]'),
+  filterDate: 'all',
+  filterCat: 'all',
+  filterDiff: 'all',
+  currentArticle: null,
+  vocabBookFilter: 'all'
+};
+
+function save() {
+  localStorage.setItem('de_dark', STATE.dark ? '1' : '0');
+  localStorage.setItem('de_showCn', STATE.showChinese ? '1' : '0');
+  localStorage.setItem('de_vocabBook', JSON.stringify(STATE.vocabBook));
+  localStorage.setItem('de_favs', JSON.stringify(STATE.favorites));
+}
+
+// Restore favorites state on news data
+NEWS_DATA.forEach(a => { a.isFavorited = STATE.favorites.includes(a.id); });
+
+// ================================================================
+//  DARK MODE
+// ================================================================
+
+function applyDark() {
+  document.documentElement.classList.toggle('dark', STATE.dark);
+}
+function toggleDark() { STATE.dark = !STATE.dark; applyDark(); save(); }
+
+// ================================================================
+//  NAVIGATION
+// ================================================================
+
+function navigateTo(view, data) {
+  STATE.view = view;
+  STATE.currentArticle = data || null;
+  updateNavHighlight();
+  if (view === 'home') renderHome();
+  else if (view === 'article') renderArticle(data);
+  else if (view === 'vocab') renderVocabBook();
+  else if (view === 'favorites') renderFavorites();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateNavHighlight() {
+  const btns = { home: 'navHome', vocab: 'navVocab', favorites: 'navFav' };
+  Object.entries(btns).forEach(([v, id]) => {
+    const el = document.getElementById(id);
+    if (v === STATE.view) {
+      el.className = 'px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 transition-colors';
+    } else {
+      el.className = 'px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
+    }
+  });
+  updateBadges();
+}
+
+function updateBadges() {
+  const vb = document.getElementById('vocabBadge');
+  if (STATE.vocabBook.length > 0) { vb.textContent = STATE.vocabBook.length; vb.classList.remove('hidden'); }
+  else vb.classList.add('hidden');
+
+  const fb = document.getElementById('favBadge');
+  if (STATE.favorites.length > 0) { fb.textContent = STATE.favorites.length; fb.classList.remove('hidden'); }
+  else fb.classList.add('hidden');
+}
+
+// ================================================================
+//  HOME PAGE
+// ================================================================
+
+function renderHome() {
+  const app = document.getElementById('app');
+  let filtered = [...NEWS_DATA];
+
+  if (STATE.filterDate !== 'all') filtered = filtered.filter(a => a.date === STATE.filterDate);
+  if (STATE.filterCat !== 'all') filtered = filtered.filter(a => a.category === STATE.filterCat);
+  if (STATE.filterDiff !== 'all') filtered = filtered.filter(a => a.difficulty === STATE.filterDiff);
+
+  const dates = [...new Set(NEWS_DATA.map(a => a.date))].sort().reverse();
+  const cats = [...new Set(NEWS_DATA.map(a => a.category))];
+
+  app.innerHTML = `
+    <div class="view-enter">
+      <!-- Filter Bar -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <div class="flex flex-wrap gap-3 items-center">
+          <span class="text-sm font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-filter mr-1"></i>筛选</span>
+          <select onchange="STATE.filterDate=this.value;renderHome()" class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="all">全部日期</option>
+            ${dates.map(d => `<option value="${d}" ${STATE.filterDate===d?'selected':''}>${d}</option>`).join('')}
+          </select>
+          <select onchange="STATE.filterCat=this.value;renderHome()" class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="all">全部分类</option>
+            ${cats.map(c => `<option value="${c}" ${STATE.filterCat===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+          <select onchange="STATE.filterDiff=this.value;renderHome()" class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="all">全部难度</option>
+            <option value="英语一" ${STATE.filterDiff==='英语一'?'selected':''}>英语一</option>
+            <option value="英语二" ${STATE.filterDiff==='英语二'?'selected':''}>英语二</option>
+          </select>
+          <span class="text-sm text-gray-400 ml-auto">共 ${filtered.length} 篇文章</span>
+        </div>
+      </div>
+
+      <!-- News Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        ${filtered.length === 0 ? `
+          <div class="col-span-full text-center py-20 text-gray-400">
+            <i class="fas fa-search text-4xl mb-3 block"></i>
+            <p>没有找到匹配的文章</p>
+          </div>
+        ` : filtered.map(a => `
+          <div onclick="navigateTo('article', ${a.id})" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${a.category==='科技'?'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300':a.category==='环境'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300':a.category==='经济'?'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300':a.category==='社会'?'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300':'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300'}">${a.category}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${a.difficulty==='英语一'?'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300':'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'}">${a.difficulty}</span>
+            </div>
+            <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-2 leading-snug line-clamp-2">${a.title}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">${a.summary}</p>
+            <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+              <span><i class="far fa-calendar mr-1"></i>${a.date}</span>
+              <span><i class="far fa-newspaper mr-1"></i>${a.source}</span>
+              <span><i class="fas fa-book-open mr-1"></i>${a.vocabWords.length}词</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ================================================================
+//  ARTICLE DETAIL VIEW
+// ================================================================
+
+function renderArticle(articleId) {
+  const a = NEWS_DATA.find(n => n.id === articleId);
+  if (!a) { navigateTo('home'); return; }
+  STATE.currentArticle = a;
+  const isFav = STATE.favorites.includes(a.id);
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="view-enter max-w-4xl mx-auto">
+      <!-- Back & Actions -->
+      <div class="flex items-center justify-between mb-6 no-print">
+        <button onclick="navigateTo('home')" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium">
+          <i class="fas fa-arrow-left"></i> 返回列表
+        </button>
+        <div class="flex items-center gap-3">
+          <button onclick="toggleChinese()" class="px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${STATE.showChinese?'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-900 dark:border-emerald-700 dark:text-emerald-300':'border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400'}">
+            <i class="fas fa-language mr-1"></i>${STATE.showChinese?'中英对照':'纯英文'}
+          </button>
+          <button onclick="toggleFavorite(${a.id})" class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${isFav?'text-red-500 bg-red-50 dark:bg-red-900':'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900'}">
+            <i class="${isFav?'fas':'far'} fa-heart text-lg ${isFav?'heart-beat':''}" id="heartIcon${a.id}"></i>
+          </button>
+          <button onclick="adjustFontSize(1)" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm font-bold">A+</button>
+          <button onclick="adjustFontSize(-1)" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm font-bold">A-</button>
+        </div>
+      </div>
+
+      <!-- Article Header -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 mb-6">
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+          <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${a.category==='科技'?'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300':a.category==='环境'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300':a.category==='经济'?'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300':a.category==='社会'?'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300':'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300'}">${a.category}</span>
+          <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${a.difficulty==='英语一'?'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300':'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'}">${a.difficulty}</span>
+          <span class="text-xs text-gray-400"><i class="far fa-calendar mr-1"></i>${a.date}</span>
+          <span class="text-xs text-gray-400"><i class="far fa-newspaper mr-1"></i>${a.source}</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 leading-tight">${a.title}</h1>
+        <p class="text-gray-500 dark:text-gray-400">${a.titleCn}</p>
+      </div>
+
+      <!-- Article Body -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 mb-6">
+        <div class="article-content text-gray-800 dark:text-gray-200 leading-relaxed" id="articleContent">
+          ${a.content.map((p, i) => `
+            <div class="content-block mb-4">
+              <p>${p.en}</p>
+              ${STATE.showChinese ? `<p class="cn-trans">${p.cn}</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Today's Vocabulary -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 mb-6 no-print">
+        <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="text-emerald-500">&#128218;</span> 本文考研词汇 (${a.vocabWords.length})</h2>
+        <div class="flex flex-wrap gap-2" id="articleVocabTags">
+          ${a.vocabWords.map(w => {
+            const info = lookupVocab(w);
+            const inBook = STATE.vocabBook.includes(w);
+            return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-all ${inBook?'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300':'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900'}" onclick="toggleVocabWord('${w}', this)" data-word="${w}">
+              ${w}
+              ${info ? `<span class="text-[10px] text-gray-400">${info.p}</span>` : ''}
+              <i class="fas ${inBook?'fa-check text-emerald-500':'fa-plus text-gray-400'} text-[10px]"></i>
+            </span>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Sentence Analysis -->
+      ${a.sentences && a.sentences.length > 0 ? `
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 no-print">
+        <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="text-purple-500">&#9670;</span> 长难句解析 (${a.sentences.length})</h2>
+        <div class="space-y-3">
+          ${a.sentences.map((s, i) => `
+            <div class="sentence-panel cursor-pointer" onclick="showSentenceDetail(${articleId}, ${i})">
+              <div class="sp-label text-purple-600 dark:text-purple-400">长难句 ${i+1}</div>
+              <div class="sp-original text-sm">${s.original.substring(0, 120)}...</div>
+              <div class="text-xs text-gray-400 mt-1">点击查看完整解析 →</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+    </div>
+  `;
+
+  // Bind vocab word events
+  setTimeout(bindArticleEvents, 100);
+}
+
+function bindArticleEvents() {
+  // Vocab highlights hover
+  document.querySelectorAll('.vocab-highlight').forEach(el => {
+    el.addEventListener('mouseenter', showTooltip);
+    el.addEventListener('mousemove', moveTooltip);
+    el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const word = this.dataset.word;
+      toggleVocabWordGlobal(word, this);
+    });
+    // Style if in vocab book
+    if (STATE.vocabBook.includes(el.dataset.word)) {
+      el.classList.add('in-vocab-book');
+    }
+  });
+
+  // Sentence marks
+  document.querySelectorAll('.sentence-mark').forEach(el => {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const sid = parseInt(this.dataset.sid);
+      if (STATE.currentArticle) {
+        showSentenceDetail(STATE.currentArticle.id, sid);
+      }
+    });
+  });
+}
+
+function toggleChinese() {
+  STATE.showChinese = !STATE.showChinese;
+  save();
+  if (STATE.currentArticle) renderArticle(STATE.currentArticle.id);
+}
+
+function adjustFontSize(delta) {
+  const content = document.getElementById('articleContent');
+  if (!content) return;
+  const current = parseFloat(getComputedStyle(content).fontSize);
+  content.style.fontSize = Math.max(14, Math.min(22, current + delta)) + 'px';
+}
+
+// ================================================================
+//  TOOLTIP
+// ================================================================
+
+function showTooltip(e) {
+  const word = this.dataset.word;
+  const info = lookupVocab(word);
+  if (!info) return;
+  const tt = document.getElementById('wordTooltip');
+  tt.querySelector('.tt-word').textContent = info.word;
+  tt.querySelector('.tt-phonetic').textContent = info.p || '';
+  tt.querySelector('.tt-meaning').textContent = info.m || '';
+  tt.querySelector('.tt-hint').textContent = STATE.vocabBook.includes(info.word) ? '✓ 已在词汇本中' : '点击加入词汇本';
+  tt.classList.add('show');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const tt = document.getElementById('wordTooltip');
+  let x = e.clientX + 16, y = e.clientY - 8;
+  if (x + tt.offsetWidth > window.innerWidth) x = e.clientX - tt.offsetWidth - 16;
+  if (y + tt.offsetHeight > window.innerHeight) y = e.clientY - tt.offsetHeight - 8;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('wordTooltip').classList.remove('show');
+}
+
+// ================================================================
+//  VOCAB BOOK MANAGEMENT
+// ================================================================
+
+function toggleVocabWord(word, el) {
+  const idx = STATE.vocabBook.indexOf(word);
+  if (idx >= 0) {
+    STATE.vocabBook.splice(idx, 1);
+    if (el) { el.classList.remove('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900', 'dark:text-emerald-300'); el.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-700', 'dark:text-gray-300'); const icon = el.querySelector('i'); if (icon) { icon.className = 'fas fa-plus text-gray-400 text-[10px]'; } }
+  } else {
+    STATE.vocabBook.push(word);
+    if (el) { el.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900', 'dark:text-emerald-300'); el.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-700', 'dark:text-gray-300'); const icon = el.querySelector('i'); if (icon) { icon.className = 'fas fa-check text-emerald-500 text-[10px]'; } }
+  }
+  save();
+  updateBadges();
+  // Update highlights if on article page
+  if (STATE.view === 'article') {
+    document.querySelectorAll(`.vocab-highlight[data-word="${word}"]`).forEach(hl => {
+      hl.classList.toggle('in-vocab-book', STATE.vocabBook.includes(word));
+    });
+  }
+}
+
+function toggleVocabWordGlobal(word, highlightEl) {
+  const idx = STATE.vocabBook.indexOf(word);
+  if (idx >= 0) {
+    STATE.vocabBook.splice(idx, 1);
+  } else {
+    STATE.vocabBook.push(word);
+  }
+  save();
+  updateBadges();
+  if (highlightEl) {
+    highlightEl.classList.toggle('in-vocab-book', STATE.vocabBook.includes(word));
+  }
+  // Update vocab tags on article page
+  const tag = document.querySelector(`[data-word="${word}"]`);
+  if (tag) {
+    const inBook = STATE.vocabBook.includes(word);
+    const info = lookupVocab(word);
+    tag.className = `inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-all ${inBook?'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300':'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900'}`;
+    const icon = tag.querySelector('i');
+    if (icon) icon.className = `fas ${inBook?'fa-check text-emerald-500':'fa-plus text-gray-400'} text-[10px]`;
+  }
+}
+
+// ================================================================
+//  VOCAB BOOK PAGE
+// ================================================================
+
+function renderVocabBook() {
+  const app = document.getElementById('app');
+  let words = [...STATE.vocabBook];
+
+  const app_html = `
+    <div class="view-enter max-w-4xl mx-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <h2 class="text-xl font-bold flex items-center gap-2"><span class="text-emerald-500">&#128218;</span> 我的词汇本</h2>
+          <div class="flex items-center gap-3">
+            <select onchange="STATE.vocabBookFilter=this.value;renderVocabBook()" class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300">
+              <option value="all" ${STATE.vocabBookFilter==='all'?'selected':''}>全部单词</option>
+              <option value="高频" ${STATE.vocabBookFilter==='高频'?'selected':''}>高频词汇</option>
+              <option value="中频" ${STATE.vocabBookFilter==='中频'?'selected':''}>中频词汇</option>
+            </select>
+            ${words.length > 0 ? `<button onclick="exportVocabBook()" class="text-sm px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"><i class="fas fa-download mr-1"></i>导出</button>` : ''}
+          </div>
+        </div>
+
+        ${words.length === 0 ? `
+          <div class="text-center py-16 text-gray-400">
+            <i class="fas fa-book-open text-5xl mb-4 block"></i>
+            <p class="text-lg mb-2">词汇本为空</p>
+            <p class="text-sm">阅读文章时，点击绿色高亮单词即可加入词汇本</p>
+            <button onclick="navigateTo('home')" class="mt-4 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors">去阅读文章</button>
+          </div>
+        ` : `
+          <!-- Filter by level -->
+          ${(() => {
+            let filtered = words;
+            if (STATE.vocabBookFilter !== 'all') {
+              filtered = words.filter(w => {
+                const info = lookupVocab(w);
+                return info && info.l === STATE.vocabBookFilter;
+              });
+            }
+            return `
+              <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">共 ${filtered.length} 个单词</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                ${filtered.map(w => {
+                  const info = lookupVocab(w) || {p:'',m:'',l:''};
+                  return `
+                    <div class="flex items-start justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors group">
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 dark:text-gray-100">${w}</span>
+                          <span class="text-xs text-gray-400">${info.p}</span>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded-full ${info.l==='高频'?'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300':'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300'}">${info.l}</span>
+                        </div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">${info.m}</div>
+                      </div>
+                      <button onclick="event.stopPropagation();removeVocabWord('${w}')" class="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 ml-2 flex-shrink-0">
+                        <i class="fas fa-trash-alt text-sm"></i>
+                      </button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `;
+          })()}
+        `}
+      </div>
+    </div>
+  `;
+  app.innerHTML = app_html;
+}
+
+function removeVocabWord(word) {
+  STATE.vocabBook = STATE.vocabBook.filter(w => w !== word);
+  save();
+  updateBadges();
+  renderVocabBook();
+}
+
+function exportVocabBook() {
+  const lines = STATE.vocabBook.map(w => {
+    const info = lookupVocab(w);
+    return info ? `${w} ${info.p} ${info.m} [${info.l}]` : w;
+  });
+  const blob = new Blob([lines.join('\n')], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'vocab-book.txt'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ================================================================
+//  FAVORITES PAGE
+// ================================================================
+
+function toggleFavorite(articleId) {
+  const idx = STATE.favorites.indexOf(articleId);
+  if (idx >= 0) {
+    STATE.favorites.splice(idx, 1);
+  } else {
+    STATE.favorites.push(articleId);
+  }
+  NEWS_DATA.find(a => a.id === articleId).isFavorited = STATE.favorites.includes(articleId);
+  save();
+  updateBadges();
+
+  // Update heart icon
+  const icon = document.getElementById('heartIcon' + articleId);
+  if (icon) {
+    const isFav = STATE.favorites.includes(articleId);
+    icon.className = (isFav ? 'fas' : 'far') + ' fa-heart text-lg heart-beat';
+    const btn = icon.parentElement;
+    if (isFav) {
+      btn.classList.add('text-red-500', 'bg-red-50', 'dark:bg-red-900');
+      btn.classList.remove('text-gray-400');
+    } else {
+      btn.classList.remove('text-red-500', 'bg-red-50', 'dark:bg-red-900');
+      btn.classList.add('text-gray-400');
+    }
+  }
+}
+
+function renderFavorites() {
+  const app = document.getElementById('app');
+  const favs = NEWS_DATA.filter(a => STATE.favorites.includes(a.id));
+
+  app.innerHTML = `
+    <div class="view-enter max-w-4xl mx-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
+        <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><span class="text-red-500"><i class="fas fa-heart"></i></span> 我的收藏</h2>
+        ${favs.length === 0 ? `
+          <div class="text-center py-16 text-gray-400">
+            <i class="far fa-heart text-5xl mb-4 block"></i>
+            <p class="text-lg mb-2">还没有收藏文章</p>
+            <p class="text-sm">阅读文章时点击心形图标即可收藏</p>
+            <button onclick="navigateTo('home')" class="mt-4 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors">去发现文章</button>
+          </div>
+        ` : `
+          <div class="space-y-3">
+            ${favs.map(a => `
+              <div class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors cursor-pointer" onclick="navigateTo('article', ${a.id})">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${a.category==='科技'?'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300':a.category==='环境'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300':a.category==='经济'?'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300':'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'}">${a.category}</span>
+                    <span class="text-xs text-gray-400">${a.date}</span>
+                  </div>
+                  <h3 class="font-semibold text-gray-900 dark:text-gray-100 truncate">${a.title}</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">${a.summary}</p>
+                </div>
+                <button onclick="event.stopPropagation();toggleFavorite(${a.id});renderFavorites()" class="ml-4 text-red-500 hover:text-red-600 transition-colors flex-shrink-0">
+                  <i class="fas fa-heart-broken"></i>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+// ================================================================
+//  SENTENCE ANALYSIS PANEL
+// ================================================================
+
+function showSentenceDetail(articleId, sentIdx) {
+  const a = NEWS_DATA.find(n => n.id === articleId);
+  if (!a || !a.sentences || !a.sentences[sentIdx]) return;
+  const s = a.sentences[sentIdx];
+  const content = document.getElementById('sentencePanelContent');
+  content.innerHTML = `
+    <div class="mb-5">
+      <div class="sp-label text-purple-600 dark:text-purple-400 mb-2">原文 Original</div>
+      <p class="text-gray-800 dark:text-gray-200 leading-relaxed font-serif">${s.original}</p>
+    </div>
+    <div class="mb-5">
+      <div class="sp-label text-blue-600 dark:text-blue-400 mb-2">译文 Translation</div>
+      <p class="text-gray-700 dark:text-gray-300 leading-relaxed">${s.translation}</p>
+    </div>
+    <div class="mb-5">
+      <div class="sp-label text-emerald-600 dark:text-emerald-400 mb-2">结构分析 Structure</div>
+      <ul class="space-y-1.5">
+        ${s.structure.map(st => `<li class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"><span class="text-purple-400 mt-1">&#9670;</span> ${st}</li>`).join('')}
+      </ul>
+    </div>
+    <div>
+      <div class="sp-label text-amber-600 dark:text-amber-400 mb-2">考点提炼 Key Points</div>
+      <ul class="space-y-1.5">
+        ${s.points.map(p => `<li class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"><span class="text-amber-400 mt-1">&#9733;</span> ${p}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+  document.getElementById('sentenceOverlay').classList.remove('hidden');
+
+  // Highlight active sentence in article
+  document.querySelectorAll('.sentence-mark').forEach(el => el.classList.remove('active'));
+  const activeMark = document.querySelector(`.sentence-mark[data-sid="${sentIdx}"]`);
+  if (activeMark) activeMark.classList.add('active');
+}
+
+function closeSentencePanel() {
+  document.getElementById('sentenceOverlay').classList.add('hidden');
+  document.querySelectorAll('.sentence-mark').forEach(el => el.classList.remove('active'));
+}
+
+// ================================================================
+//  KEYBOARD SHORTCUTS
+// ================================================================
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (!document.getElementById('sentenceOverlay').classList.contains('hidden')) {
+      closeSentencePanel();
+    } else if (STATE.view === 'article') {
+      navigateTo('home');
+    }
+  }
+  if (e.ctrlKey && e.key === 'b' && STATE.view === 'article') {
+    e.preventDefault();
+    toggleChinese();
+  }
+});
+
+// ================================================================
+//  INITIALIZATION
+// ================================================================
+
+function init() {
+  applyDark();
+  updateBadges();
+  navigateTo('home');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
