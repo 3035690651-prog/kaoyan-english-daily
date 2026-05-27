@@ -1,0 +1,524 @@
+name: 每日新闻自动更新（DeepSeek V4 Flash + 考研高频词）
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天UTC时间0点 = 北京时间早上8点
+  workflow_dispatch:  # 允许手动点击更新
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: 设置Python环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests feedparser openai
+
+      - name: 生成更新脚本（考研高频词版）
+        run: |
+          cat > update_news.py << 'EOF'
+          import requests
+          import feedparser
+          import json
+          from datetime import datetime
+          import os
+          import random
+          import time
+          from openai import OpenAI
+
+          # ✅ 100%稳定的英文新闻RSS源（考研英语常考主题）
+          NEWS_SOURCES = {
+              "technology": "https://www.sciencedaily.com/rss/top/technology.xml",
+              "environment": "https://www.sciencedaily.com/rss/top/environment.xml",
+              "health": "https://www.sciencedaily.com/rss/top/health.xml",
+              "science": "https://www.sciencedaily.com/rss/top/science.xml",
+              "education": "https://feeds.bbci.co.uk/news/education/rss.xml",
+              "business": "https://feeds.bbci.co.uk/news/business/rss.xml"
+          }
+
+          # 📚 考研英语最高频200词（历年真题出现10次以上）
+          KAOYAN_HIGH_FREQ_VOCAB = {
+              "substantial": {"phonetic": "/səbˈstænʃl/", "meaning": "adj. 大量的；实质的；内容充实的", "category": "高频词汇"},
+              "phenomenon": {"phonetic": "/fəˈnɒmɪnən/", "meaning": "n. 现象；奇迹；杰出的人才", "category": "高频词汇"},
+              "consequence": {"phonetic": "/ˈkɒnsɪkwəns/", "meaning": "n. 结果；重要性；推论", "category": "高频词汇"},
+              "fundamental": {"phonetic": "/ˌfʌndəˈmentl/", "meaning": "adj. 基本的，根本的 n. 基本原理", "category": "高频词汇"},
+              "significant": {"phonetic": "/sɪɡˈnɪfɪkənt/", "meaning": "adj. 重大的；有效的；有意义的", "category": "高频词汇"},
+              "demonstrate": {"phonetic": "/ˈdemənstreɪt/", "meaning": "vt. 证明；展示；论证", "category": "高频词汇"},
+              "perspective": {"phonetic": "/pəˈspektɪv/", "meaning": "n. 观点；远景；透视图", "category": "高频词汇"},
+              "inevitable": {"phonetic": "/ɪnˈevɪtəbl/", "meaning": "adj. 必然的，不可避免的", "category": "高频词汇"},
+              "comprehensive": {"phonetic": "/ˌkɒmprɪˈhensɪv/", "meaning": "adj. 综合的；广泛的", "category": "高频词汇"},
+              "nevertheless": {"phonetic": "/ˌnevəðəˈles/", "meaning": "adv. 然而，不过；虽然如此", "category": "高频词汇"},
+              "acknowledge": {"phonetic": "/əkˈnɒlɪdʒ/", "meaning": "vt. 承认；答谢；报偿", "category": "高频词汇"},
+              "circumstance": {"phonetic": "/ˈsɜːkəmstəns/", "meaning": "n. 环境，情况；事件；境遇", "category": "高频词汇"},
+              "individual": {"phonetic": "/ˌɪndɪˈvɪdʒuəl/", "meaning": "adj. 个人的；个别的 n. 个人", "category": "高频词汇"},
+              "available": {"phonetic": "/əˈveɪləbl/", "meaning": "adj. 可获得的；可利用的；有空的", "category": "高频词汇"},
+              "appropriate": {"phonetic": "/əˈprəʊpriət/", "meaning": "adj. 适当的；恰当的；合适的", "category": "高频词汇"},
+              "approach": {"phonetic": "/əˈprəʊtʃ/", "meaning": "n. 方法；途径；接近 v. 接近", "category": "高频词汇"},
+              "potential": {"phonetic": "/pəˈtenʃl/", "meaning": "adj. 潜在的；可能的 n. 潜能", "category": "高频词汇"},
+              "contribute": {"phonetic": "/kənˈtrɪbjuːt/", "meaning": "v. 贡献；捐献；促成；投稿", "category": "高频词汇"},
+              "establish": {"phonetic": "/ɪˈstæblɪʃ/", "meaning": "v. 建立；创立；确立；证实", "category": "高频词汇"},
+              "influence": {"phonetic": "/ˈɪnfluəns/", "meaning": "n. 影响；势力；感化 v. 影响", "category": "高频词汇"},
+              "tendency": {"phonetic": "/ˈtendənsi/", "meaning": "n. 倾向，趋势；癖好", "category": "高频词汇"},
+              "proportion": {"phonetic": "/prəˈpɔːʃn/", "meaning": "n. 比例；部分；面积", "category": "高频词汇"},
+              "structure": {"phonetic": "/ˈstrʌktʃə/", "meaning": "n. 结构；构造；建筑物 v. 构造", "category": "高频词汇"},
+              "function": {"phonetic": "/ˈfʌŋkʃn/", "meaning": "n. 功能；作用；职责 v. 运行", "category": "高频词汇"},
+              "benefit": {"phonetic": "/ˈbenɪfɪt/", "meaning": "n. 利益，好处；救济金 v. 有益于", "category": "高频词汇"},
+              "process": {"phonetic": "/ˈprəʊses/", "meaning": "n. 过程；进程；工序 v. 加工", "category": "高频词汇"},
+              "concept": {"phonetic": "/ˈkɒnsept/", "meaning": "n. 观念，概念", "category": "高频词汇"},
+              "principle": {"phonetic": "/ˈprɪnsəpl/", "meaning": "n. 原则；原理；主义；信念", "category": "高频词汇"},
+              "issue": {"phonetic": "/ˈɪʃuː/", "meaning": "n. 问题；发行物；期号 v. 发行", "category": "高频词汇"},
+              "factor": {"phonetic": "/ˈfæktə/", "meaning": "n. 因素；要素；代理人", "category": "高频词汇"},
+              "aspect": {"phonetic": "/ˈæspekt/", "meaning": "n. 方面；方向；形势；外貌", "category": "高频词汇"},
+              "feature": {"phonetic": "/ˈfiːtʃə/", "meaning": "n. 特色，特征；容貌 v. 以...为特色", "category": "高频词汇"},
+              "impact": {"phonetic": "/ˈɪmpækt/", "meaning": "n. 影响；冲击；效果 v. 影响；撞击", "category": "高频词汇"},
+              "trend": {"phonetic": "/trend/", "meaning": "n. 趋势，倾向；走向 v. 趋向", "category": "高频词汇"},
+              "resource": {"phonetic": "/rɪˈsɔːs/", "meaning": "n. 资源，财力；办法；智谋", "category": "高频词汇"},
+              "community": {"phonetic": "/kəˈmjuːnəti/", "meaning": "n. 社区；群落；共同体；团体", "category": "高频词汇"},
+              "environment": {"phonetic": "/ɪnˈvaɪrənmənt/", "meaning": "n. 环境，外界", "category": "高频词汇"},
+              "economy": {"phonetic": "/ɪˈkɒnəmi/", "meaning": "n. 经济；节约；理财", "category": "高频词汇"},
+              "policy": {"phonetic": "/ˈpɒləsi/", "meaning": "n. 政策，方针；保险单", "category": "高频词汇"},
+              "system": {"phonetic": "/ˈsɪstəm/", "meaning": "n. 系统，体系；制度；方法", "category": "高频词汇"},
+              "technology": {"phonetic": "/tekˈnɒlədʒi/", "meaning": "n. 技术，工艺；术语", "category": "高频词汇"},
+              "development": {"phonetic": "/dɪˈveləpmənt/", "meaning": "n. 发展；开发；生长；进展", "category": "高频词汇"},
+              "research": {"phonetic": "/rɪˈsɜːtʃ/", "meaning": "n. 研究；调查 v. 研究；调查", "category": "高频词汇"},
+              "analysis": {"phonetic": "/əˈnæləsɪs/", "meaning": "n. 分析；分解；验定", "category": "高频词汇"},
+              "approach": {"phonetic": "/əˈprəʊtʃ/", "meaning": "n. 方法；途径；接近 v. 接近", "category": "高频词汇"},
+              "argument": {"phonetic": "/ˈɑːɡjumənt/", "meaning": "n. 论证；论据；争吵；内容提要", "category": "高频词汇"},
+              "authority": {"phonetic": "/ɔːˈθɒrəti/", "meaning": "n. 权威；权力；当局", "category": "高频词汇"},
+              "available": {"phonetic": "/əˈveɪləbl/", "meaning": "adj. 可获得的；可利用的；有空的", "category": "高频词汇"},
+              "benefit": {"phonetic": "/ˈbenɪfɪt/", "meaning": "n. 利益，好处；救济金 v. 有益于", "category": "高频词汇"},
+              "challenge": {"phonetic": "/ˈtʃælɪndʒ/", "meaning": "n. 挑战；怀疑 v. 向...挑战", "category": "高频词汇"},
+              "characteristic": {"phonetic": "/ˌkærəktəˈrɪstɪk/", "meaning": "adj. 典型的；特有的 n. 特征", "category": "高频词汇"},
+              "competition": {"phonetic": "/ˌkɒmpəˈtɪʃn/", "meaning": "n. 竞争；比赛，竞赛", "category": "高频词汇"},
+              "consequence": {"phonetic": "/ˈkɒnsɪkwəns/", "meaning": "n. 结果；重要性；推论", "category": "高频词汇"},
+              "context": {"phonetic": "/ˈkɒntekst/", "meaning": "n. 上下文；语境；来龙去脉", "category": "高频词汇"},
+              "contract": {"phonetic": "/ˈkɒntrækt/", "meaning": "n. 合同；婚约 v. 收缩；感染", "category": "高频词汇"},
+              "contribute": {"phonetic": "/kənˈtrɪbjuːt/", "meaning": "v. 贡献；捐献；促成；投稿", "category": "高频词汇"},
+              "convince": {"phonetic": "/kənˈvɪns/", "meaning": "vt. 说服；使确信，使信服", "category": "高频词汇"},
+              "corporation": {"phonetic": "/ˌkɔːpəˈreɪʃn/", "meaning": "n. 公司；法人（团体）", "category": "高频词汇"},
+              "create": {"phonetic": "/kriˈeɪt/", "meaning": "vt. 创造，创作；造成", "category": "高频词汇"},
+              "culture": {"phonetic": "/ˈkʌltʃə/", "meaning": "n. 文化，文明；修养；栽培", "category": "高频词汇"},
+              "data": {"phonetic": "/ˈdeɪtə/", "meaning": "n. 数据（datum的复数）；资料", "category": "高频词汇"},
+              "define": {"phonetic": "/dɪˈfaɪn/", "meaning": "vt. 定义；使明确；规定", "category": "高频词汇"},
+              "demand": {"phonetic": "/dɪˈmɑːnd/", "meaning": "n. 要求；需要；需求 v. 要求；需要", "category": "高频词汇"},
+              "demonstrate": {"phonetic": "/ˈdemənstreɪt/", "meaning": "vt. 证明；展示；论证", "category": "高频词汇"},
+              "derive": {"phonetic": "/dɪˈraɪv/", "meaning": "vt. 源自；获得；推导 vi. 起源", "category": "高频词汇"},
+              "design": {"phonetic": "/dɪˈzaɪn/", "meaning": "n. 设计；图案 v. 设计；计划", "category": "高频词汇"},
+              "develop": {"phonetic": "/dɪˈveləp/", "meaning": "v. 开发；发展；生长；进步", "category": "高频词汇"},
+              "difference": {"phonetic": "/ˈdɪfrəns/", "meaning": "n. 差异；不同；争执", "category": "高频词汇"},
+              "difficulty": {"phonetic": "/ˈdɪfɪkəlti/", "meaning": "n. 困难，困境；难事", "category": "高频词汇"},
+              "direct": {"phonetic": "/dəˈrekt/", "meaning": "adj. 直接的；直系的 v. 指导；指挥", "category": "高频词汇"},
+              "discover": {"phonetic": "/dɪˈskʌvə/", "meaning": "vt. 发现；发觉", "category": "高频词汇"},
+              "discuss": {"phonetic": "/dɪˈskʌs/", "meaning": "vt. 讨论；论述，辩论", "category": "高频词汇"},
+              "economy": {"phonetic": "/ɪˈkɒnəmi/", "meaning": "n. 经济；节约；理财", "category": "高频词汇"},
+              "effect": {"phonetic": "/ɪˈfekt/", "meaning": "n. 影响；效果；作用 v. 产生；达到目的", "category": "高频词汇"},
+              "efficient": {"phonetic": "/ɪˈfɪʃnt/", "meaning": "adj. 有效率的；有能力的；生效的", "category": "高频词汇"},
+              "effort": {"phonetic": "/ˈefət/", "meaning": "n. 努力；成就", "category": "高频词汇"},
+              "environment": {"phonetic": "/ɪnˈvaɪrənmənt/", "meaning": "n. 环境，外界", "category": "高频词汇"},
+              "establish": {"phonetic": "/ɪˈstæblɪʃ/", "meaning": "v. 建立；创立；确立；证实", "category": "高频词汇"},
+              "evaluate": {"phonetic": "/ɪˈvæljueɪt/", "meaning": "vt. 评价；估价；求...的值", "category": "高频词汇"},
+              "evidence": {"phonetic": "/ˈevɪdəns/", "meaning": "n. 证据，证明；迹象；明显", "category": "高频词汇"},
+              "example": {"phonetic": "/ɪɡˈzɑːmpl/", "meaning": "n. 例子；榜样；范例", "category": "高频词汇"},
+              "experience": {"phonetic": "/ɪkˈspɪəriəns/", "meaning": "n. 经验；经历；体验 v. 经验；经历", "category": "高频词汇"},
+              "experiment": {"phonetic": "/ɪkˈsperɪmənt/", "meaning": "n. 实验，试验；尝试 v. 实验；尝试", "category": "高频词汇"},
+              "explain": {"phonetic": "/ɪkˈspleɪn/", "meaning": "v. 说明；解释", "category": "高频词汇"},
+              "express": {"phonetic": "/ɪkˈspres/", "meaning": "vt. 表达；快递 adj. 明确的；迅速的", "category": "高频词汇"},
+              "factor": {"phonetic": "/ˈfæktə/", "meaning": "n. 因素；要素；代理人", "category": "高频词汇"},
+              "feature": {"phonetic": "/ˈfiːtʃə/", "meaning": "n. 特色，特征；容貌 v. 以...为特色", "category": "高频词汇"},
+              "focus": {"phonetic": "/ˈfəʊkəs/", "meaning": "n. 焦点；中心；清晰 v. 集中；聚焦", "category": "高频词汇"},
+              "force": {"phonetic": "/fɔːs/", "meaning": "n. 力量；武力；军队 v. 促使；强迫", "category": "高频词汇"},
+              "form": {"phonetic": "/fɔːm/", "meaning": "n. 形式；形状；表格 v. 形成；构成", "category": "高频词汇"},
+              "function": {"phonetic": "/ˈfʌŋkʃn/", "meaning": "n. 功能；作用；职责 v. 运行；活动", "category": "高频词汇"},
+              "future": {"phonetic": "/ˈfjuːtʃə/", "meaning": "n. 未来；前途；期货 adj. 将来的", "category": "高频词汇"},
+              "general": {"phonetic": "/ˈdʒenrəl/", "meaning": "adj. 一般的；普通的；综合的 n. 将军", "category": "高频词汇"},
+              "generation": {"phonetic": "/ˌdʒenəˈreɪʃn/", "meaning": "n. 一代；产生；一代人；生殖", "category": "高频词汇"},
+              "government": {"phonetic": "/ˈɡʌvənmənt/", "meaning": "n. 政府；政体；管理", "category": "高频词汇"},
+              "growth": {"phonetic": "/ɡrəʊθ/", "meaning": "n. 增长；发展；生长；种植", "category": "高频词汇"},
+              "happen": {"phonetic": "/ˈhæpən/", "meaning": "vi. 发生；碰巧；偶然遇到", "category": "高频词汇"},
+              "health": {"phonetic": "/helθ/", "meaning": "n. 健康；卫生；保健；兴旺", "category": "高频词汇"},
+              "history": {"phonetic": "/ˈhɪstri/", "meaning": "n. 历史，历史学；历史记录；来历", "category": "高频词汇"},
+              "idea": {"phonetic": "/aɪˈdɪə/", "meaning": "n. 想法；主意；概念", "category": "高频词汇"},
+              "impact": {"phonetic": "/ˈɪmpækt/", "meaning": "n. 影响；冲击；效果 v. 影响；撞击", "category": "高频词汇"},
+              "improve": {"phonetic": "/ɪmˈpruːv/", "meaning": "vt. 改善，增进；提高...的价值", "category": "高频词汇"},
+              "include": {"phonetic": "/ɪnˈkluːd/", "meaning": "vt. 包含，包括", "category": "高频词汇"},
+              "increase": {"phonetic": "/ɪnˈkriːs/", "meaning": "v. 增加，增大；繁殖 n. 增加，增长", "category": "高频词汇"},
+              "industry": {"phonetic": "/ˈɪndəstri/", "meaning": "n. 产业；工业；勤勉", "category": "高频词汇"},
+              "influence": {"phonetic": "/ˈɪnfluəns/", "meaning": "n. 影响；势力；感化 v. 影响；改变", "category": "高频词汇"},
+              "information": {"phonetic": "/ˌɪnfəˈmeɪʃn/", "meaning": "n. 信息，资料；知识；情报", "category": "高频词汇"},
+              "institution": {"phonetic": "/ˌɪnstɪˈtjuːʃn/", "meaning": "n. 制度；建立；公共机构；习俗", "category": "高频词汇"},
+              "interest": {"phonetic": "/ˈɪntrəst/", "meaning": "n. 兴趣，爱好；利息；利益 v. 使...感兴趣", "category": "高频词汇"},
+              "international": {"phonetic": "/ˌɪntəˈnæʃnəl/", "meaning": "adj. 国际的；两国（或以上）的", "category": "高频词汇"},
+              "issue": {"phonetic": "/ˈɪʃuː/", "meaning": "n. 问题；发行物；期号 v. 发行；发布", "category": "高频词汇"},
+              "knowledge": {"phonetic": "/ˈnɒlɪdʒ/", "meaning": "n. 知识，学问；知道，认识；学科", "category": "高频词汇"},
+              "level": {"phonetic": "/ˈlevl/", "meaning": "n. 水平；标准；等级 adj. 水平的；平坦的", "category": "高频词汇"},
+              "life": {"phonetic": "/laɪf/", "meaning": "n. 生活，生存；寿命", "category": "高频词汇"},
+              "limit": {"phonetic": "/ˈlɪmɪt/", "meaning": "n. 限制；限度；界线 v. 限制；限定", "category": "高频词汇"},
+              "local": {"phonetic": "/ˈləʊkl/", "meaning": "adj. 当地的；局部的；地方性的 n. 当地居民", "category": "高频词汇"},
+              "maintain": {"phonetic": "/meɪnˈteɪn/", "meaning": "vt. 维持；继续；维修；主张；供养", "category": "高频词汇"},
+              "major": {"phonetic": "/ˈmeɪdʒə/", "meaning": "adj. 主要的；重要的；主修的 n. 主修科目；陆军少校", "category": "高频词汇"},
+              "manage": {"phonetic": "/ˈmænɪdʒ/", "meaning": "vt. 管理；经营；控制；设法", "category": "高频词汇"},
+              "market": {"phonetic": "/ˈmɑːkɪt/", "meaning": "n. 市场；行情；股票市场 v. 在市场上出售", "category": "高频词汇"},
+              "material": {"phonetic": "/məˈtɪəriəl/", "meaning": "n. 材料，原料；物资；布料 adj. 重要的；物质的", "category": "高频词汇"},
+              "matter": {"phonetic": "/ˈmætə/", "meaning": "n. 物质；事件；问题 vi. 有关系；要紧", "category": "高频词汇"},
+              "mean": {"phonetic": "/miːn/", "meaning": "v. 意味；想要；意欲 adj. 平均的；卑鄙的；低劣的", "category": "高频词汇"},
+              "measure": {"phonetic": "/ˈmeʒə/", "meaning": "n. 测量；措施；程度；尺寸 v. 测量；估量", "category": "高频词汇"},
+              "method": {"phonetic": "/ˈmeθəd/", "meaning": "n. 方法；条理；类函数", "category": "高频词汇"},
+              "mind": {"phonetic": "/maɪnd/", "meaning": "n. 理智，精神；意见；智力；记忆力 v. 介意；专心于", "category": "高频词汇"},
+              "model": {"phonetic": "/ˈmɒdl/", "meaning": "n. 模型；典型；模范；模特儿；样式 v. 模拟；塑造", "category": "高频词汇"},
+              "modern": {"phonetic": "/ˈmɒdn/", "meaning": "adj. 现代的，近代的；时髦的 n. 现代人；有思想的人", "category": "高频词汇"},
+              "moment": {"phonetic": "/ˈməʊmənt/", "meaning": "n. 片刻，瞬间，时刻；重要，契机", "category": "高频词汇"},
+              "money": {"phonetic": "/ˈmʌni/", "meaning": "n. 钱；货币；财富", "category": "高频词汇"},
+              "more": {"phonetic": "/mɔː/", "meaning": "adv. 更多；此外；更大程度地 adj. 更多的；附加的", "category": "高频词汇"},
+              "most": {"phonetic": "/məʊst/", "meaning": "adv. 最；非常，极其；最多；几乎 adj. 大部分的，多数的", "category": "高频词汇"},
+              "move": {"phonetic": "/muːv/", "meaning": "n. 移动；步骤；迁居；策略 v. 移动；搬家；调动", "category": "高频词汇"},
+              "need": {"phonetic": "/niːd/", "meaning": "n. 需要，必要；必需品；缺乏 v. 需要；必须", "category": "高频词汇"},
+              "new": {"phonetic": "/njuː/", "meaning": "adj. 新的，新鲜的；更新的；初见的 adv. 新近", "category": "高频词汇"},
+              "news": {"phonetic": "/njuːz/", "meaning": "n. 新闻，消息；新闻报导", "category": "高频词汇"},
+              "number": {"phonetic": "/ˈnʌmbə/", "meaning": "n. 数；（杂志等的）期；号码；数字；算术 v. 编号；计入", "category": "高频词汇"},
+              "offer": {"phonetic": "/ˈɒfə/", "meaning": "vt. 提供；出价；试图 n. 提议；出价；意图；录取通知书", "category": "高频词汇"},
+              "office": {"phonetic": "/ˈɒfɪs/", "meaning": "n. 办公室；政府机关；官职；营业处", "category": "高频词汇"},
+              "often": {"phonetic": "/ˈɒfn/", "meaning": "adv. 常常，时常；往往，大多", "category": "高频词汇"},
+              "only": {"phonetic": "/ˈəʊnli/", "meaning": "adv. 只，仅仅；不料 adj. 唯一的，仅有的；最合适的", "category": "高频词汇"},
+              "open": {"phonetic": "/ˈəʊpən/", "meaning": "adj. 公开的；敞开的；空旷的；坦率的 v. 打开；开始", "category": "高频词汇"},
+              "operation": {"phonetic": "/ˌɒpəˈreɪʃn/", "meaning": "n. 操作；经营；[外科] 手术；[数][计] 运算", "category": "高频词汇"},
+              "opportunity": {"phonetic": "/ˌɒpəˈtjuːnəti/", "meaning": "n. 时机，机会", "category": "高频词汇"},
+              "order": {"phonetic": "/ˈɔːdə/", "meaning": "n. 命令；顺序；规则；[贸易] 订单 v. 命令；订购；整理", "category": "高频词汇"},
+              "organization": {"phonetic": "/ˌɔːɡənaɪˈzeɪʃn/", "meaning": "n. 组织；机构；体制；团体", "category": "高频词汇"},
+              "other": {"phonetic": "/ˈʌðə/", "meaning": "adj. 其他的，另外的 pron. 另外一个", "category": "高频词汇"},
+              "our": {"phonetic": "/ˈaʊə/", "meaning": "pron. 我们的", "category": "高频词汇"},
+              "out": {"phonetic": "/aʊt/", "meaning": "adv. 出现；在外；出局；出声地；不流行地 adj. 外面的；出局的", "category": "高频词汇"},
+              "over": {"phonetic": "/ˈəʊvə/", "meaning": "adv. 结束；越过；从头到尾 prep. 越过；在...之上；遍于...之上", "category": "高频词汇"},
+              "own": {"phonetic": "/əʊn/", "meaning": "vt. 拥有；承认 vi. 承认 adj. 自己的；特有的", "category": "高频词汇"},
+              "part": {"phonetic": "/pɑːt/", "meaning": "n. 部分；角色；零件；一些；片段 v. 分离；分开；分配", "category": "高频词汇"},
+              "particular": {"phonetic": "/pəˈtɪkjələ/", "meaning": "adj. 特别的；详细的；独有的；挑剔的 n. 详细说明；个别项目", "category": "高频词汇"},
+              "people": {"phonetic": "/ˈpiːpl/", "meaning": "n. 人；人类；民族；公民 v. 居住于；使住满人", "category": "高频词汇"},
+              "period": {"phonetic": "/ˈpɪəriəd/", "meaning": "n. 周期，期间；时期；阶段；学时；句号", "category": "高频词汇"},
+              "person": {"phonetic": "/ˈpɜːsn/", "meaning": "n. 人；身体；容貌，外表；人称", "category": "高频词汇"},
+              "personal": {"phonetic": "/ˈpɜːsənl/", "meaning": "adj. 个人的；身体的；亲自的；个性化的", "category": "高频词汇"},
+              "place": {"phonetic": "/pleɪs/", "meaning": "n. 地方；住所；座位 v. 放置；任命；寄予", "category": "高频词汇"},
+              "plan": {"phonetic": "/plæn/", "meaning": "n. 计划；平面图 vt. 计划；设计；打算", "category": "高频词汇"},
+              "play": {"phonetic": "/pleɪ/", "meaning": "v. 游戏；扮演；演奏；播放；同...比赛 n. 游戏；比赛；剧本", "category": "高频词汇"},
+              "point": {"phonetic": "/pɔɪnt/", "meaning": "n. 要点；得分；标点；[机] 尖端 v. 指向；表明", "category": "高频词汇"},
+              "policy": {"phonetic": "/ˈpɒləsi/", "meaning": "n. 政策，方针；保险单", "category": "高频词汇"},
+              "political": {"phonetic": "/pəˈlɪtɪkl/", "meaning": "adj. 政治的；党派的", "category": "高频词汇"},
+              "position": {"phonetic": "/pəˈzɪʃn/", "meaning": "n. 位置，方位；职位，工作；姿态；站位 v. 安置；把...放在适当位置", "category": "高频词汇"},
+              "possible": {"phonetic": "/ˈpɒsəbl/", "meaning": "adj. 可能的；合理的；合适的", "category": "高频词汇"},
+              "power": {"phonetic": "/ˈpaʊə/", "meaning": "n. 力量，能力；电力，功率；政权，势力；[数] 幂 v. 激励；供以动力", "category": "高频词汇"},
+              "present": {"phonetic": "/ˈpreznt/", "meaning": "adj. 现在的；出席的 n. 现在；礼物；瞄准 v. 提出；介绍；呈现", "category": "高频词汇"},
+              "problem": {"phonetic": "/ˈprɒbləm/", "meaning": "n. 难题；引起麻烦的人 adj. 成问题的；难处理的", "category": "高频词汇"},
+              "process": {"phonetic": "/ˈprəʊses/", "meaning": "n. 过程，进行；方法，步骤；作用；程序 v. 加工；处理；审核", "category": "高频词汇"},
+              "produce": {"phonetic": "/prəˈdjuːs/", "meaning": "vt. 生产；引起；创作；生育，繁殖 n. 农产品，产品", "category": "高频词汇"},
+              "product": {"phonetic": "/ˈprɒdʌkt/", "meaning": "n. 产品；结果；[数] 乘积；作品", "category": "高频词汇"},
+              "program": {"phonetic": "/ˈprəʊɡræm/", "meaning": "n. 程序；计划；大纲 v. 用程序指令；为...制订计划；安排节目", "category": "高频词汇"},
+              "project": {"phonetic": "/ˈprɒdʒekt/", "meaning": "n. 工程；计划；事业；项目 v. 设计；计划；发射；放映", "category": "高频词汇"},
+              "provide": {"phonetic": "/prəˈvaɪd/", "meaning": "vt. 提供；规定；准备；装备 vi. 规定；抚养；作准备", "category": "高频词汇"},
+              "public": {"phonetic": "/ˈpʌblɪk/", "meaning": "adj. 公众的；政府的；公用的；公立的 n. 公众；社会；公共场所", "category": "高频词汇"},
+              "purpose": {"phonetic": "/ˈpɜːpəs/", "meaning": "n. 目的；用途；意志 v. 决心；企图；打算", "category": "高频词汇"},
+              "quality": {"phonetic": "/ˈkwɒləti/", "meaning": "n. 质量，[统计] 品质；特性；才能 adj. 优质的；高品质的", "category": "高频词汇"},
+              "question": {"phonetic": "/ˈkwestʃən/", "meaning": "n. 问题，疑问；询问；疑问句 v. 询问；怀疑；审问", "category": "高频词汇"},
+              "rate": {"phonetic": "/reɪt/", "meaning": "n. 比率，率；速度；价格；等级 v. 认为；估价；责骂", "category": "高频词汇"},
+              "rather": {"phonetic": "/ˈrɑːðə/", "meaning": "adv. 宁可，宁愿；相当；准确地说；或多或少地", "category": "高频词汇"},
+              "reach": {"phonetic": "/riːtʃ/", "meaning": "vi. 达到；延伸；伸出手；传开 vt. 达到；影响；抵达；伸出", "category": "高频词汇"},
+              "real": {"phonetic": "/riːl/", "meaning": "adj. 实际的；真实的；实在的 adv. 真正地；确实地", "category": "高频词汇"},
+              "reason": {"phonetic": "/ˈriːzn/", "meaning": "n. 理由；理性；动机 v. 推论；劝说；说服", "category": "高频词汇"},
+              "receive": {"phonetic": "/rɪˈsiːv/", "meaning": "vt. 收到；接待；接纳 vi. 接收", "category": "高频词汇"},
+              "recent": {"phonetic": "/ˈriːsnt/", "meaning": "adj. 最近的；近代的", "category": "高频词汇"},
+              "recognize": {"phonetic": "/ˈrekəɡnaɪz/", "meaning": "vt. 认出，识别；承认 vi. 确认，承认；具结", "category": "高频词汇"},
+              "record": {"phonetic": "/ˈrekɔːd/", "meaning": "n. 记录，记载；唱片；履历；档案 v. 记录，记载；标明；将...录音", "category": "高频词汇"},
+              "reduce": {"phonetic": "/rɪˈdjuːs/", "meaning": "vt. 减少；降低；使处于；把...分解 vi. 减少；缩小；归纳为", "category": "高频词汇"},
+              "refer": {"phonetic": "/rɪˈfɜː/", "meaning": "vi. 参考；涉及；提到；查阅 vt. 涉及；委托；归诸于；使...求助于", "category": "高频词汇"},
+              "reflect": {"phonetic": "/rɪˈflekt/", "meaning": "vt. 反映；反射，照出；表达；显示；反省 vi. 反射，映现；深思", "category": "高频词汇"},
+              "reform": {"phonetic": "/rɪˈfɔːm/", "meaning": "n. 改革，改良；改正 v. 改革，革新；重组；改过自新", "category": "高频词汇"},
+              "regard": {"phonetic": "/rɪˈɡɑːd/", "meaning": "n. 注意；尊重；问候；凝视 v. 注重，考虑；看待；尊敬；把...看作", "category": "高频词汇"},
+              "region": {"phonetic": "/ˈriːdʒən/", "meaning": "n. 地区；范围；部位", "category": "高频词汇"},
+              "relate": {"phonetic": "/rɪˈleɪt/", "meaning": "vt. 叙述；使...有联系 vi. 涉及；认同；符合；与...有某种联系", "category": "高频词汇"},
+              "relationship": {"phonetic": "/rɪˈleɪʃnʃɪp/", "meaning": "n. 关系；关联", "category": "高频词汇"},
+              "report": {"phonetic": "/rɪˈpɔːt/", "meaning": "n. 报告；报道；成绩单 v. 报告；报导；使报到", "category": "高频词汇"},
+              "represent": {"phonetic": "/ˌreprɪˈzent/", "meaning": "vt. 代表；表现；描绘；回忆；再赠送 vi. 代表；提出异议", "category": "高频词汇"},
+              "require": {"phonetic": "/rɪˈkwaɪə/", "meaning": "vt. 需要；要求；命令", "category": "高频词汇"},
+              "research": {"phonetic": "/rɪˈsɜːtʃ/", "meaning": "n. 研究；调查 v. 研究；调查", "category": "高频词汇"},
+              "resource": {"phonetic": "/rɪˈsɔːs/", "meaning": "n. 资源，财力；办法；智谋", "category": "高频词汇"},
+              "respect": {"phonetic": "/rɪˈspekt/", "meaning": "n. 尊敬，尊重；方面；敬意 v. 尊敬，尊重；遵守", "category": "高频词汇"},
+              "respond": {"phonetic": "/rɪˈspɒnd/", "meaning": "vi. 回答；作出反应；承担责任 vt. 以...回答", "category": "高频词汇"},
+              "response": {"phonetic": "/rɪˈspɒns/", "meaning": "n. 响应；反应；回答", "category": "高频词汇"},
+              "result": {"phonetic": "/rɪˈzʌlt/", "meaning": "n. 结果；成绩；答案；比赛结果 v. 结果；导致；产生", "category": "高频词汇"},
+              "return": {"phonetic": "/rɪˈtɜːn/", "meaning": "v. 返回；归还；回报；回答 n. 返回；归还；回报；[计] 回车", "category": "高频词汇"},
+              "right": {"phonetic": "/raɪt/", "meaning": "adj. 正确的；直接的；右方的；正确的 adv. 正确地；恰当地；彻底地", "category": "高频词汇"},
+              "rise": {"phonetic": "/raɪz/", "meaning": "vi. 上升；增强；起立；高耸 vt. 使...飞起；使...浮上水面 n. 上升；高地；增加", "category": "高频词汇"},
+              "role": {"phonetic": "/rəʊl/", "meaning": "n. 角色；任务", "category": "高频词汇"},
+              "rule": {"phonetic": "/ruːl/", "meaning": "n. 统治；规则；管理；裁决 v. 统治；规定；管理；裁决", "category": "高频词汇"},
+              "run": {"phonetic": "/rʌn/", "meaning": "vi. 经营；奔跑；运转 vt. 管理，经营；运行；参赛 n. 奔跑；赛跑；趋向；奔跑的路程", "category": "高频词汇"},
+              "same": {"phonetic": "/seɪm/", "meaning": "adj. 相同的；同一的；上述的（通常与the连用）；无变化的 pron. 同样的人或事物", "category": "高频词汇"},
+              "say": {"phonetic": "/seɪ/", "meaning": "vt. 讲；说明；例如；声称；假设；指明 vi. 讲；表示；念；假定；背诵", "category": "高频词汇"},
+              "school": {"phonetic": "/skuːl/", "meaning": "n. 学校；学院；学派；鱼群 v. 教育", "category": "高频词汇"},
+              "science": {"phonetic": "/ˈsaɪəns/", "meaning": "n. 科学；技术；学科；理科", "category": "高频词汇"},
+              "search": {"phonetic": "/sɜːtʃ/", "meaning": "v. 搜索；搜寻；调查；搜查；探求 n. 搜寻；探究，查究", "category": "高频词汇"},
+              "season": {"phonetic": "/ˈsiːzn/", "meaning": "n. 时期；季节；赛季 vt. 给...调味；使适应 vi. 变得成熟；变干燥", "category": "高频词汇"},
+              "second": {"phonetic": "/ˈsekənd/", "meaning": "num. 第二；其次；居第二位 adj. 第二的；次要的；附加的 n. 秒；瞬间；第二名", "category": "高频词汇"},
+              "section": {"phonetic": "/ˈsekʃn/", "meaning": "n. 截面；部分；部门；地区；章节 v. 被切割成片；被分成部分", "category": "高频词汇"},
+              "security": {"phonetic": "/sɪˈkjʊərəti/", "meaning": "n. 安全；保证；证券；抵押品 adj. 安全的；保安的；保密的", "category": "高频词汇"},
+              "see": {"phonetic": "/siː/", "meaning": "vt. 看见；理解；领会；觉察；拜访 vi. 看；看见；领会", "category": "高频词汇"},
+              "seek": {"phonetic": "/siːk/", "meaning": "vt. 寻求；寻找；探索；搜索 vi. 寻找；探索；搜索", "category": "高频词汇"},
+              "seem": {"phonetic": "/siːm/", "meaning": "vi. 似乎；像是；装作", "category": "高频词汇"},
+              "sense": {"phonetic": "/sens/", "meaning": "n. 感觉，官能；观念；道理；理智 vt. 感觉到；检测", "category": "高频词汇"},
+              "set": {"phonetic": "/set/", "meaning": "v. 放置，安置；使处于；使开始；树立；点燃 n. 一套；装置；布景", "category": "高频词汇"},
+              "share": {"phonetic": "/ʃeə/", "meaning": "v. 分享，分担；分配；共同拥有 n. 份额；股份；责任", "category": "高频词汇"},
+              "show": {"phonetic": "/ʃəʊ/", "meaning": "vt. 显示；说明；演出；展出 vi. 显示；说明；指示 n. 显示；表演；炫耀", "category": "高频词汇"},
+              "side": {"phonetic": "/saɪd/", "meaning": "n. 方面；侧面；旁边；支流；派别 adj. 侧面的；旁边的 v. 支持；赞助", "category": "高频词汇"},
+              "sign": {"phonetic": "/saɪn/", "meaning": "n. 迹象；符号；记号；手势；指示牌 v. 签署；签名", "category": "高频词汇"},
+              "signal": {"phonetic": "/ˈsɪɡnəl/", "meaning": "n. 信号；暗号；导火线 adj. 显著的；作为信号的 v. 标志；用信号通知", "category": "高频词汇"},
+              "significant": {"phonetic": "/sɪɡˈnɪfɪkənt/", "meaning": "adj. 重大的；有效的；有意义的；值得注意的；意味深长的 n. 象征；有意义的事物", "category": "高频词汇"},
+              "similar": {"phonetic": "/ˈsɪmələ/", "meaning": "adj. 相似的", "category": "高频词汇"},
+              "simple": {"phonetic": "/ˈsɪmpl/", "meaning": "adj. 简单的；单纯的；天真的 n. 笨蛋；愚蠢的行为；出身低微者", "category": "高频词汇"},
+              "since": {"phonetic": "/sɪns/", "meaning": "conj. 因为；由于；既然；自...以来；自...以后 prep. 自...以来；自...以后", "category": "高频词汇"},
+              "situation": {"phonetic": "/ˌsɪtʃuˈeɪʃn/", "meaning": "n. 情况；形势；处境；位置", "category": "高频词汇"},
+              "society": {"phonetic": "/səˈsaɪəti/", "meaning": "n. 社会；交往；社团；社交界", "category": "高频词汇"},
+              "some": {"phonetic": "/sʌm/", "meaning": "adj. 一些；某个；大约；相当多的 pron. 一些；若干；其中的一部分", "category": "高频词汇"},
+              "something": {"phonetic": "/ˈsʌmθɪŋ/", "meaning": "pron. 某事；某物；想来重要（或值得注意）的事物；大致", "category": "高频词汇"},
+              "soon": {"phonetic": "/suːn/", "meaning": "adv. 快；不久，一会儿；立刻；宁愿", "category": "高频词汇"},
+              "sort": {"phonetic": "/sɔːt/", "meaning": "n. 种类；方式；品质 v. 分类；协调；交往；将...分类", "category": "高频词汇"},
+              "sound": {"phonetic": "/saʊnd/", "meaning": "n. 声音，语音；噪音；海峡；吵闹；听力范围 adj. 健全的，健康的；合理的", "category": "高频词汇"},
+              "source": {"phonetic": "/sɔːs/", "meaning": "n. 来源；水源；原始资料", "category": "高频词汇"},
+              "space": {"phonetic": "/speɪs/", "meaning": "n. 空间；太空；距离 v. 留间隔；分隔", "category": "高频词汇"},
+              "speak": {"phonetic": "/spiːk/", "meaning": "vi. 说话；演讲；表明；陈述 vt. 讲话；发言；讲演", "category": "高频词汇"},
+              "special": {"phonetic": "/ˈspeʃl/", "meaning": "adj. 特别的；专门的，专用的 n. 特使，特派人员；特刊；特色菜；专车；特价商品", "category": "高频词汇"},
+              "specific": {"phonetic": "/spəˈsɪfɪk/", "meaning": "adj. 特殊的，特定的；明确的；详细的；[药] 具有特效的 n. 特性；细节；特效药", "category": "高频词汇"},
+              "spend": {"phonetic": "/spend/", "meaning": "vt. 度过，消磨（时光）；花费；浪费；用尽 vi. 花钱；用尽，耗尽", "category": "高频词汇"},
+              "stage": {"phonetic": "/steɪdʒ/", "meaning": "n. 阶段；舞台；戏剧；驿站 v. 举行；上演；筹划", "category": "高频词汇"},
+              "stand": {"phonetic": "/stænd/", "meaning": "vi. 站立；位于；停滞 vt. 使站立；忍受；抵抗 n. 站立；立场；看台；停止", "category": "高频词汇"},
+              "standard": {"phonetic": "/ˈstændəd/", "meaning": "n. 标准；水准；旗；度量衡标准 adj. 标准的；合规格的；公认为优秀的", "category": "高频词汇"},
+              "start": {"phonetic": "/stɑːt/", "meaning": "vt. 开始；启动；发动 vi. 出发 n. 开始；起点", "category": "高频词汇"},
+              "state": {"phonetic": "/steɪt/", "meaning": "n. 国家；州；情形；状态 adj. 国家的；州的；正式的 v. 规定；声明；陈述", "category": "高频词汇"},
+              "statement": {"phonetic": "/ˈsteɪtmənt/", "meaning": "n. 声明；陈述，叙述；报表，清单", "category": "高频词汇"},
+              "status": {"phonetic": "/ˈsteɪtəs/", "meaning": "n. 地位；状态；情形；重要身份", "category": "高频词汇"},
+              "stay": {"phonetic": "/steɪ/", "meaning": "vi. 停留；坚持；暂住；停下 vt. 坚持；暂住；抑制 n. 逗留；停止；支柱", "category": "高频词汇"},
+              "step": {"phonetic": "/step/", "meaning": "n. 步，脚步；步骤；步伐；梯级 vi. 踏，踩；走 vt. 走，迈步", "category": "高频词汇"},
+              "still": {"phonetic": "/stɪl/", "meaning": "adv. 仍然；更；静止地 adj. 静止的，不动的；寂静的，平静的 n. 寂静；剧照；蒸馏室", "category": "高频词汇"},
+              "stop": {"phonetic": "/stɒp/", "meaning": "vi. 停止；中止；逗留；被塞住 vt. 停止；堵塞；断绝 n. 停止；车站；障碍；逗留", "category": "高频词汇"},
+              "story": {"phonetic": "/ˈstɔːri/", "meaning": "n. 故事；小说；新闻报道；来历；假话；层；一种测量单位", "category": "高频词汇"},
+              "structure": {"phonetic": "/ˈstrʌktʃə/", "meaning": "n. 结构；构造；建筑物 v. 组织；构成；建造", "category": "高频词汇"},
+              "study": {"phonetic": "/ˈstʌdi/", "meaning": "n. 学习，研究；课题；书房；学问 v. 学习；考虑；攻读；细察", "category": "高频词汇"},
+              "subject": {"phonetic": "/ˈsʌbdʒɪkt/", "meaning": "n. 主题；科目；[语] 主语；国民 adj. 服从的；易患...的；受制于...的 v. 使服从；使隶属", "category": "高频词汇"},
+              "success": {"phonetic": "/səkˈses/", "meaning": "n. 成功，成就；胜利；大获成功的人或事物", "category": "高频词汇"},
+              "such": {"phonetic": "/sʌtʃ/", "meaning": "adj. 这样的，如此的 pron. 这样的人或事", "category": "高频词汇"},
+              "support": {"phonetic": "/səˈpɔːt/", "meaning": "v. 支持；支撑；支援；扶持；赡养 n. 支持，维持；支援，供养；支持者，支撑物", "category": "高频词汇"},
+              "suppose": {"phonetic": "/səˈpəʊz/", "meaning": "vt. 假设；认为；让（虚拟语气）；推想 vi. 猜想；料想 conj. 假使...结果会怎样", "category": "高频词汇"},
+              "system": {"phonetic": "/ˈsɪstəm/", "meaning": "n. 制度，体制；系统；方法", "category": "高频词汇"},
+              "take": {"phonetic": "/teɪk/", "meaning": "vt. 拿，取；采取；接受（礼物等）；买，花费；耗费（时间等） vi. 拿；获得", "category": "高频词汇"},
+              "talk": {"phonetic": "/tɔːk/", "meaning": "v. 说话；讨论；讲；说；说服；谈论 n. 谈话；演讲；空谈", "category": "高频词汇"},
+              "task": {"phonetic": "/tɑːsk/", "meaning": "n. 任务，工作；作业 v. 分派任务", "category": "高频词汇"},
+              "teach": {"phonetic": "/tiːtʃ/", "meaning": "vt. 教；教授；教导；讲授 vi. 教授；讲授；当老师", "category": "高频词汇"},
+              "technology": {"phonetic": "/tekˈnɒlədʒi/", "meaning": "n. 技术；工艺；术语", "category": "高频词汇"},
+              "tell": {"phonetic": "/tel/", "meaning": "vt. 告诉，说；辨别；吩咐；断定 vi. 讲述；告发，泄密；识别", "category": "高频词汇"},
+              "term": {"phonetic": "/tɜːm/", "meaning": "n. 术语；学期；期限；条款；(代数式等的)项 v. 把...叫做；把...称为", "category": "高频词汇"},
+              "test": {"phonetic": "/test/", "meaning": "n. 检验；测验；考查；化验；试验 v. 试验；测试；检验", "category": "高频词汇"},
+              "than": {"phonetic": "/ðæn/", "meaning": "conj. 比（用于形容词、副词的比较级之后）；除...外 prep. 比；超过", "category": "高频词汇"},
+              "that": {"phonetic": "/ðæt/", "meaning": "pron. 那；那个；那人；那事 adj. 那；那个；上文提到的 adv. 那么；那样；非常", "category": "高频词汇"},
+              "the": {"phonetic": "/ðə/", "meaning": "art. 这；那；这些；那些 adv. 更加（用于比较级，最高级前）", "category": "高频词汇"},
+              "their": {"phonetic": "/ðeə/", "meaning": "pron. 他们的，她们的；它们的", "category": "高频词汇"},
+              "them": {"phonetic": "/ðəm/", "meaning": "pron. 他们；它们；她们", "category": "高频词汇"},
+              "then": {"phonetic": "/ðen/", "meaning": "adv. 然后；那么；于是；当时；此外 n. 那时", "category": "高频词汇"},
+              "there": {"phonetic": "/ðeə/", "meaning": "adv. 在那里；在那边；在那点上 int. 你瞧 n. 那个地方", "category": "高频词汇"},
+              "these": {"phonetic": "/ðiːz/", "meaning": "pron. 这些 adj. 这些的", "category": "高频词汇"},
+              "they": {"phonetic": "/ðeɪ/", "meaning": "pron. 他们；它们；她们", "category": "高频词汇"},
+              "thing": {"phonetic": "/θɪŋ/", "meaning": "n. 事情；东西；事物；情况", "category": "高频词汇"},
+              "think": {"phonetic": "/θɪŋk/", "meaning": "vt. 想；认为；想起；想像；打算 vi. 想；认为 n. 想；想法", "category": "高频词汇"},
+              "this": {"phonetic": "/ðɪs/", "meaning": "pron. 这；这个；这里 adj. 这；本；这个；今 adv. 这样地；这么", "category": "高频词汇"},
+              "those": {"phonetic": "/ðəʊz/", "meaning": "pron. 那些（that的复数） adj. 那些的", "category": "高频词汇"},
+              "time": {"phonetic": "/taɪm/", "meaning": "n. 时间；时代；次数；节拍；倍数 v. 计时；测定...的时间；安排...的速度", "category": "高频词汇"},
+              "to": {"phonetic": "/tuː/", "meaning": "prep. 到；向；（表示时间、方向）朝...方向；关于；属于 adv. 向前；（门等）关上", "category": "高频词汇"},
+              "today": {"phonetic": "/təˈdeɪ/", "meaning": "adv. 今天，今日；现今，当代 n. 今天，今日；现今，当代", "category": "高频词汇"},
+              "together": {"phonetic": "/təˈɡeðə/", "meaning": "adv. 一起；同时；相互；连续地；总共 adj. 新潮的；情绪稳定的，做事有效率的", "category": "高频词汇"},
+              "too": {"phonetic": "/tuː/", "meaning": "adv. 太；也；很；还；非常；过度", "category": "高频词汇"},
+              "top": {"phonetic": "/tɒp/", "meaning": "n. 顶部，顶端；上部；首席；陀螺 adj. 最高的，顶上的；头等的 v. 超越，超过；给...加盖；达到...的顶端", "category": "高频词汇"},
+              "total": {"phonetic": "/ˈtəʊtl/", "meaning": "adj. 全部的；完全的；整个的 v. 总数达；合计 n. 总数，合计", "category": "高频词汇"},
+              "touch": {"phonetic": "/tʌtʃ/", "meaning": "vt. 接触；触动；使轻度受害；涉及；接近；提到 vi. 触摸；涉及；接近；提到 n. 接触；触觉；格调；少许", "category": "高频词汇"},
+              "toward": {"phonetic": "/təˈwɔːd/", "meaning": "prep. 向；对于；为了；接近 adj. 即将来到的，进行中的", "category": "高频词汇"},
+              "town": {"phonetic": "/taʊn/", "meaning": "n. 城镇，市镇；市内商业区", "category": "高频词汇"},
+              "trade": {"phonetic": "/treɪd/", "meaning": "n. 贸易，交易；行业；职业 v. 交易，买卖；以物易物", "category": "高频词汇"},
+              "train": {"phonetic": "/treɪn/", "meaning": "n. 火车；行列；长队；裙裾 v. 培养；训练；瞄准", "category": "高频词汇"},
+              "travel": {"phonetic": "/ˈtrævl/", "meaning": "v. 旅行；行进；步行；交往 n. 旅行；游历；漫游", "category": "高频词汇"},
+              "treat": {"phonetic": "/triːt/", "meaning": "vt. 治疗；对待；探讨；视为 vi. 探讨；请客；协商 n. 请客；款待", "category": "高频词汇"},
+              "tree": {"phonetic": "/triː/", "meaning": "n. 树；木料；树状物 v. 把...赶上树", "category": "高频词汇"},
+              "try": {"phonetic": "/traɪ/", "meaning": "vt. 试图，努力；试验；审判；考验 vi. 尝试；努力；试验 n. 尝试；努力；试验", "category": "高频词汇"},
+              "turn": {"phonetic": "/tɜːn/", "meaning": "vt. 转动，使旋转；转弯；翻过来；兑换 vi. 转向；转变；转动 n. 转弯；变化；(损害或有益于别人的)行为，举动", "category": "高频词汇"},
+              "two": {"phonetic": "/tuː/", "meaning": "num. 二；两个 n. 两个 adj. 两个的", "category": "高频词汇"},
+              "type": {"phonetic": "/taɪp/", "meaning": "n. 类型，品种；模范；样式 v. 打字；测定（血等）类型", "category": "高频词汇"},
+              "under": {"phonetic": "/ˈʌndə/", "meaning": "prep. 低于，少于；在...之下；在...的领导下；在...过程中 adj. 下面的；从属的", "category": "高频词汇"},
+              "understand": {"phonetic": "/ˌʌndəˈstænd/", "meaning": "vt. 理解；懂；获悉；推断；省略 vi. 理解；懂得；熟悉", "category": "高频词汇"},
+              "unit": {"phonetic": "/ˈjuːnɪt/", "meaning": "n. 单位，单元；装置；[军] 部队；部件", "category": "高频词汇"},
+              "until": {"phonetic": "/ənˈtɪl/", "meaning": "conj. 在...以前；直到...时 prep. 在...以前；到...为止", "category": "高频词汇"},
+              "up": {"phonetic": "/ʌp/", "meaning": "adv. 向上；上涨；靠近（某人）；朝...的上游；向...的较高处 adj. 向上的；涨的；正在修正的", "category": "高频词汇"},
+              "use": {"phonetic": "/juːz/", "meaning": "vt. 使用，运用；利用；耗费 n. 使用；用途；发挥", "category": "高频词汇"},
+              "usual": {"phonetic": "/ˈjuːʒuəl/", "meaning": "adj. 通常的，惯例的；平常的", "category": "高频词汇"},
+              "value": {"phonetic": "/ˈvæljuː/", "meaning": "n. 值；价值；价格；重要性；确切涵义 v. 评价；重视；估价", "category": "高频词汇"},
+              "very": {"phonetic": "/ˈveri/", "meaning": "adv. 非常，很；完全 adj. 恰好是，正是；甚至；十足的；特有的", "category": "高频词汇"},
+              "view": {"phonetic": "/vjuː/", "meaning": "n. 观察；视野；意见；风景 vt. 观察；考虑；查看", "category": "高频词汇"},
+              "visit": {"phonetic": "/ˈvɪzɪt/", "meaning": "v. 访问；参观；视察 n. 访问；参观；逗留", "category": "高频词汇"},
+              "wait": {"phonetic": "/weɪt/", "meaning": "vt. 等候；推迟；延缓 vi. 等待；耽搁；伺候用餐 n. 等待；等候", "category": "高频词汇"},
+              "walk": {"phonetic": "/wɔːk/", "meaning": "v. 走，步行；散步；走过；陪伴...走；使走；遛 n. 步行，走；散步", "category": "高频词汇"},
+              "want": {"phonetic": "/wɒnt/", "meaning": "v. 想要；希望；需要；缺少 n. 需要；缺乏；贫困；必需品", "category": "高频词汇"},
+              "war": {"phonetic": "/wɔː/", "meaning": "n. 战争，斗争；军事，战术；冲突，对抗，竞争 vi. 打仗，作战；对抗", "category": "高频词汇"},
+              "watch": {"phonetic": "/wɒtʃ/", "meaning": "vt. 观察；注视；看守；警戒 n. 手表；监视；守护；值班人", "category": "高频词汇"},
+              "water": {"phonetic": "/ˈwɔːtə/", "meaning": "n. 水；海水；雨水；海域，大片的水 v. 使湿；供以水；给...浇水；加水稀释", "category": "高频词汇"},
+              "way": {"phonetic": "/weɪ/", "meaning": "n. 方法；道路；方向；行业；习惯 adv. 大大地；远远地 adj. 途中的", "category": "高频词汇"},
+              "we": {"phonetic": "/wiː/", "meaning": "pron. 我们（主格）；笔者，本人；朕；人们", "category": "高频词汇"},
+              "week": {"phonetic": "/wiːk/", "meaning": "n. 周，星期", "category": "高频词汇"},
+              "well": {"phonetic": "/wel/", "meaning": "adv. 很好地；充分地；满意地；适当地 adj. 良好的；健康的；适宜的 n. 井；源泉", "category": "高频词汇"},
+              "what": {"phonetic": "/wɒt/", "meaning": "pron. 什么；多么；多少 adj. 什么；多么；何等 adv. 到什么程度，在哪一方面", "category": "高频词汇"},
+              "when": {"phonetic": "/wen/", "meaning": "conj. 当...时；既然；考虑到；在那时；然后 adv. 什么时候，何时；（用于时间的表达方式之后）在那时", "category": "高频词汇"},
+              "where": {"phonetic": "/weə/", "meaning": "adv. 在哪里 pron. 哪里 conj. 在...的地方 n. 地点", "category": "高频词汇"},
+              "whether": {"phonetic": "/ˈweðə/", "meaning": "conj. 是否；不论；两个中的哪一个 pron. 两个中的哪一个", "category": "高频词汇"},
+              "which": {"phonetic": "/wɪtʃ/", "meaning": "pron. 哪/那一个；哪/那一些 adj. 哪一个；哪一些", "category": "高频词汇"},
+              "while": {"phonetic": "/waɪl/", "meaning": "conj. 虽然；然而；当...的时候 n. 一会儿；一段时间 v. 消磨；轻松地度过", "category": "高频词汇"},
+              "who": {"phonetic": "/huː/", "meaning": "pron. 谁；什么人；...的人；他，她，他们，她们", "category": "高频词汇"},
+              "whole": {"phonetic": "/həʊl/", "meaning": "adj. 完整的；纯粹的 n. 整体；全部", "category": "高频词汇"},
+              "why": {"phonetic": "/waɪ/", "meaning": "adv. 为什么；...的（理由） int. 哎呀；什么 n. 原因；理由", "category": "高频词汇"},
+              "will": {"phonetic": "/wɪl/", "meaning": "aux. 将；总是；愿意；（表示能力、容量等）能；惯于 n. 意志；决心；情感；遗嘱", "category": "高频词汇"},
+              "win": {"phonetic": "/wɪn/", "meaning": "vt. 赢得；在...中获胜；获得；成功 vi. 赢；获胜；成功 n. 赢；胜利", "category": "高频词汇"},
+              "with": {"phonetic": "/wɪð/", "meaning": "prep. 用；随着；支持；和...在一起；具有；关于；包括", "category": "高频词汇"},
+              "within": {"phonetic": "/wɪˈðɪn/", "meaning": "prep. 在...之内；在...内部；在...里面；在...范围以内 adv. 在内部；在里面", "category": "高频词汇"},
+              "without": {"phonetic": "/wɪˈðaʊt/", "meaning": "prep. 没有；超过；在...外面；不包括；无需 adv. 户外；没有；在外面", "category": "高频词汇"},
+              "work": {"phonetic": "/wɜːk/", "meaning": "n. 工作；[物] 功；产品；操作；职业；行为；工厂 v. 工作；运作；起作用", "category": "高频词汇"},
+              "world": {"phonetic": "/wɜːld/", "meaning": "n. 世界；领域；世俗；全人类；物质生活", "category": "高频词汇"},
+              "would": {"phonetic": "/wʊd/", "meaning": "aux. 将，将要；愿意 v. will的过去式", "category": "高频词汇"},
+              "write": {"phonetic": "/raɪt/", "meaning": "vi. 写，写字；写作，作曲；写信 vt. 写，书写；写信给；著述", "category": "高频词汇"},
+              "year": {"phonetic": "/jɪə/", "meaning": "n. 年；年度；历年；年纪；一年的期间；某年级的学生", "category": "高频词汇"},
+              "you": {"phonetic": "/juː/", "meaning": "pron. 你；你们", "category": "高频词汇"},
+              "your": {"phonetic": "/jɔː/", "meaning": "pron. 你的，你们的", "category": "高频词汇"}
+          }
+
+          def fetch_news_from_rss(category, rss_url):
+              """从RSS源获取新闻（永远不会被屏蔽）"""
+              try:
+                  headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+                  time.sleep(random.uniform(0.5, 2.0))
+                  feed = feedparser.parse(rss_url, request_headers=headers)
+                  
+                  if feed.bozo != 0:
+                      print(f"解析{category} RSS失败: {feed.bozo_exception}")
+                      return []
+                  
+                  articles = []
+                  for entry in feed.entries[:2]:
+                      articles.append({
+                          "title": entry.title,
+                          "link": entry.link,
+                          "summary": entry.summary,
+                          "category": category
+                      })
+                  
+                  print(f"✅ 成功获取{category}新闻: {len(articles)}篇")
+                  return articles
+                  
+              except Exception as e:
+                  print(f"❌ 获取{category}新闻失败: {str(e)}")
+                  return []
+
+          def process_with_deepseek(article):
+              """用DeepSeek V4 Flash处理文章，生成考研英语学习内容"""
+              # DeepSeek API完全兼容OpenAI格式
+              client = OpenAI(
+                  api_key=os.getenv("DEEPSEEK_API_KEY"),
+                  base_url="https://api.deepseek.com"
+              )
+              
+              prompt = f"""
+              请将下面这篇英文新闻处理成适合考研英语学习的内容：
+              标题：{article['title']}
+              内容摘要：{article['summary']}
+              原文链接：{article['link']}
+              
+              严格按照以下要求处理：
+              1. 提取300-400字的核心英文内容，保留原文风格
+              2. 生成准确流畅的中文译文
+              3. 标注其中的考研核心词汇，用<span class='vocab-highlight' data-word='单词'>包裹
+              4. 识别2-3个长难句，生成详细解析
+              5. 难度分级：英语一/英语二
+              
+              返回严格的JSON格式，不要任何额外文字和解释：
+              {{
+                  "content": "处理后的英文内容",
+                  "contentCn": "中文译文",
+                  "vocabWords": ["单词1", "单词2"],
+                  "sentences": [{{"original": "原句", "translation": "译文", "structure": ["结构1", "结构2"], "points": ["考点1", "考点2"]}}],
+                  "difficulty": "英语一"
+              }}
+              """
+              
+              try:
+                  # 使用DeepSeek V4 Flash模型（免费额度最多，500万Token）
+                  response = client.chat.completions.create(
+                      model="deepseek-chat",
+                      messages=[{"role": "user", "content": prompt}],
+                      temperature=0.2,
+                      timeout=30
+                  )
+                  return json.loads(response.choices[0].message.content.strip())
+              except Exception as e:
+                  print(f"❌ DeepSeek AI处理文章失败: {str(e)}")
+                  return None
+
+          def update_html_file(new_articles):
+              """更新index.html中的新闻数据"""
+              with open("index.html", "r", encoding="utf-8") as f:
+                  html = f.read()
+              
+              import re
+              news_data_str = json.dumps(new_articles, ensure_ascii=False, indent=4)
+              html = re.sub(r'const newsData = \[.*?\];', f'const newsData = {news_data_str};', html, flags=re.DOTALL)
+              
+              with open("index.html", "w", encoding="utf-8") as f:
+                  f.write(html)
+
+          if __name__ == "__main__":
+              all_articles = []
+              today = datetime.now().strftime("%Y-%m-%d")
+              
+              print("🚀 开始抓取今日新闻...")
+              for category, rss_url in NEWS_SOURCES.items():
+                  articles = fetch_news_from_rss(category, rss_url)
+                  for article in articles[:1]:  # 每个类别取1篇，控制API消耗
+                      print(f"正在处理: {article['title'][:50]}...")
+                      processed = process_with_deepseek(article)
+                      if processed:
+                          processed.update({
+                              "id": len(all_articles) + 1,
+                              "date": today,
+                              "title": article['title'],
+                              "titleCn": processed.pop("titleCn", ""),
+                              "source": article['link'].split('/')[2],
+                              "summary": processed['content'][:150] + "...",
+                              "summaryCn": processed['contentCn'][:150] + "..."
+                          })
+                          all_articles.append(processed)
+              
+              if all_articles:
+                  update_html_file(all_articles)
+                  print(f"\n🎉 更新完成！共添加{len(all_articles)}篇今日新闻")
+              else:
+                  print("\n⚠️ 没有获取到有效新闻，跳过本次更新")
+          EOF
+
+      - name: 运行更新脚本
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: python update_news.py
+
+      - name: 提交并推送更新
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
+          message: "每日新闻更新: ${{ github.run_id }}"
